@@ -3,226 +3,316 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Análisis de Rentabilidad — Vigilancia</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<title>Análisis de Rentabilidad — Delthac1 Seguridad</title>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --verde: #16a34a; --verde-bg: #f0fdf4; --verde-borde: #bbf7d0;
-    --gris: #6b7280; --gris-bg: #f9fafb; --gris-borde: #e5e7eb;
-    --rojo: #dc2626; --rojo-bg: #fef2f2; --rojo-borde: #fecaca;
-    --amarillo: #d97706; --amarillo-bg: #fffbeb; --amarillo-borde: #fde68a;
-    --azul: #2563eb; --azul-bg: #eff6ff; --azul-borde: #bfdbfe;
-    --texto: #111827; --texto2: #6b7280; --borde: #e5e7eb;
-    --radio: 10px; --sombra: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
-  }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f3f4f6; color: var(--texto); min-height: 100vh; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --rojo: #8B0000;
+  --rojo-vivo: #C0392B;
+  --rojo-claro: #f8eaea;
+  --rojo-borde: #e8c0c0;
+  --gris-oscuro: #2c2c2c;
+  --gris-medio: #5a5a5a;
+  --gris-claro: #9aa0a6;
+  --gris-bg: #f5f5f5;
+  --gris-borde: #dde1e7;
+  --plateado: #c0c8d0;
+  --plateado-bg: #eef0f3;
+  --blanco: #ffffff;
+  --texto: #1a1a1a;
+  --texto2: #555;
+  --verde: #16a34a;
+  --verde-bg: #f0fdf4;
+  --verde-borde: #bbf7d0;
+  --amarillo: #b45309;
+  --amarillo-bg: #fffbeb;
+  --amarillo-borde: #fde68a;
+  --azul: #1d4ed8;
+  --azul-bg: #eff6ff;
+  --azul-borde: #bfdbfe;
+  --radio: 10px;
+  --sombra: 0 2px 8px rgba(0,0,0,.08);
+  --sombra-md: 0 4px 16px rgba(0,0,0,.12);
+}
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #ECECEC; color: var(--texto); min-height: 100vh; }
 
-  /* HEADER */
-  .header { background: #1e3a5f; color: white; padding: 20px 32px; display: flex; align-items: center; justify-content: space-between; }
-  .header h1 { font-size: 20px; font-weight: 600; }
-  .header p { font-size: 13px; opacity: .7; margin-top: 2px; }
-  .header-right { display: flex; align-items: center; gap: 12px; }
-  .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; }
-  .sync-dot.error { background: #f87171; }
-  .sync-label { font-size: 12px; opacity: .8; }
+/* HEADER */
+.header {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 60%, #3a3a3a 100%);
+  border-bottom: 3px solid var(--rojo);
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 70px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.3);
+}
+.header-left { display: flex; align-items: center; gap: 20px; }
+.logo-img { height: 44px; filter: brightness(1.1); }
+.header-divider { width: 1px; height: 36px; background: var(--rojo); opacity: .6; }
+.header-title h1 { font-size: 17px; font-weight: 700; color: #ffffff; letter-spacing: .02em; }
+.header-title p { font-size: 11px; color: var(--plateado); margin-top: 2px; letter-spacing: .04em; text-transform: uppercase; }
+.header-right { display: flex; align-items: center; gap: 10px; }
+.sync-pill { display: flex; align-items: center; gap: 7px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); border-radius: 20px; padding: 5px 12px; }
+.sync-dot { width: 7px; height: 7px; border-radius: 50%; background: #9aa0a6; }
+.sync-dot.ok { background: #4ade80; box-shadow: 0 0 6px #4ade8088; }
+.sync-dot.error { background: #f87171; }
+.sync-label { font-size: 12px; color: var(--plateado); font-weight: 500; }
 
-  /* MAIN */
-  .main { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+/* MAIN */
+.main { max-width: 1200px; margin: 0 auto; padding: 28px 24px; }
 
-  /* PROGRESO */
-  .progreso-bar { background: white; border-radius: var(--radio); padding: 20px 24px; margin-bottom: 28px; box-shadow: var(--sombra); display: flex; align-items: center; gap: 20px; }
-  .progreso-texto { flex: 1; }
-  .progreso-texto h2 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
-  .progreso-track { height: 8px; background: var(--gris-borde); border-radius: 4px; overflow: hidden; flex: 1; }
-  .progreso-fill { height: 100%; background: var(--verde); border-radius: 4px; transition: width .4s; }
-  .progreso-pct { font-size: 14px; font-weight: 600; color: var(--verde); min-width: 36px; text-align: right; }
+/* PROGRESO */
+.progreso-wrap { background: var(--blanco); border-radius: var(--radio); padding: 18px 24px; margin-bottom: 24px; box-shadow: var(--sombra); border-left: 4px solid var(--rojo); display: flex; align-items: center; gap: 20px; }
+.progreso-info h2 { font-size: 14px; font-weight: 600; color: var(--gris-oscuro); }
+.progreso-info p { font-size: 12px; color: var(--gris-claro); margin-top: 2px; }
+.progreso-track { flex: 1; height: 6px; background: var(--gris-bg); border-radius: 4px; overflow: hidden; }
+.progreso-fill { height: 100%; background: linear-gradient(90deg, var(--rojo) 0%, var(--rojo-vivo) 100%); border-radius: 4px; transition: width .4s; }
+.progreso-pct { font-size: 18px; font-weight: 800; color: var(--rojo); min-width: 44px; text-align: right; }
 
-  /* GRID MÓDULOS */
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-bottom: 28px; }
+/* GRID MÓDULOS */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; margin-bottom: 24px; }
 
-  /* TARJETA MÓDULO */
-  .modulo { background: white; border-radius: var(--radio); border: 2px solid var(--gris-borde); box-shadow: var(--sombra); cursor: pointer; transition: all .2s; overflow: hidden; }
-  .modulo:hover { border-color: #93c5fd; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.1); }
-  .modulo.completo { border-color: var(--verde-borde); background: var(--verde-bg); }
-  .modulo-header { padding: 18px 20px; display: flex; align-items: center; gap: 14px; }
-  .modulo-icono { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; background: var(--gris-bg); }
-  .modulo.completo .modulo-icono { background: var(--verde-bg); }
-  .modulo-info { flex: 1; }
-  .modulo-nombre { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
-  .modulo-estado { font-size: 12px; color: var(--texto2); }
-  .modulo.completo .modulo-estado { color: var(--verde); }
-  .modulo-check { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--gris-borde); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .modulo.completo .modulo-check { background: var(--verde); border-color: var(--verde); color: white; font-size: 14px; }
-  .modulo-resumen { padding: 0 20px 14px; font-size: 12px; color: var(--texto2); border-top: 1px solid var(--gris-borde); padding-top: 10px; }
-  .modulo.completo .modulo-resumen { border-top-color: var(--verde-borde); }
+/* TARJETA MÓDULO */
+.modulo {
+  background: var(--blanco);
+  border-radius: var(--radio);
+  border: 1.5px solid var(--gris-borde);
+  box-shadow: var(--sombra);
+  cursor: pointer;
+  transition: all .2s;
+  overflow: hidden;
+}
+.modulo:hover { border-color: var(--rojo-vivo); transform: translateY(-2px); box-shadow: var(--sombra-md); }
+.modulo.completo { border-color: var(--verde-borde); background: var(--verde-bg); }
+.modulo-header { padding: 16px 18px; display: flex; align-items: center; gap: 12px; }
+.modulo-icono {
+  width: 40px; height: 40px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 19px; flex-shrink: 0;
+  background: var(--plateado-bg);
+  border: 1px solid var(--gris-borde);
+}
+.modulo.completo .modulo-icono { background: var(--verde-bg); border-color: var(--verde-borde); }
+.modulo-info { flex: 1; }
+.modulo-nombre { font-size: 13.5px; font-weight: 700; color: var(--gris-oscuro); }
+.modulo-estado { font-size: 11.5px; color: var(--gris-claro); margin-top: 2px; }
+.modulo.completo .modulo-estado { color: var(--verde); font-weight: 500; }
+.modulo-check {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 1.5px solid var(--gris-borde);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 13px; color: transparent;
+}
+.modulo.completo .modulo-check { background: var(--verde); border-color: var(--verde); color: white; }
+.modulo-resumen {
+  padding: 8px 18px 12px;
+  font-size: 11.5px; color: var(--gris-medio);
+  border-top: 1px solid var(--gris-borde);
+}
+.modulo.completo .modulo-resumen { border-top-color: var(--verde-borde); color: var(--verde); font-weight: 500; }
 
-  /* PANEL INFERIOR */
-  .panel-bottom { display: grid; grid-template-columns: 1fr 340px; gap: 20px; }
+/* PANEL INFERIOR */
+.panel-bottom { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
 
-  /* RESUMEN */
-  .resumen { background: white; border-radius: var(--radio); box-shadow: var(--sombra); overflow: hidden; }
-  .resumen-header { background: #1e3a5f; color: white; padding: 16px 20px; font-size: 15px; font-weight: 600; }
-  .pyg { padding: 16px 20px; }
-  .pyg-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--gris-borde); font-size: 13px; }
-  .pyg-row:last-child { border-bottom: none; }
-  .pyg-row.total { font-weight: 700; font-size: 14px; }
-  .pyg-row.subtotal { background: var(--gris-bg); margin: 0 -20px; padding: 8px 20px; }
-  .pyg-row.verde .pyg-val { color: var(--verde); }
-  .pyg-row.rojo .pyg-val { color: var(--rojo); }
-  .pyg-row.azul .pyg-val { color: var(--azul); }
-  .pyg-label { color: var(--texto2); }
-  .pyg-row.total .pyg-label { color: var(--texto); }
-  .pyg-val { font-variant-numeric: tabular-nums; font-weight: 500; }
-  .pyg-indent { padding-left: 16px; }
-  .pyg-indent .pyg-label { font-size: 12px; }
+/* ESTADO DE RESULTADOS */
+.resumen { background: var(--blanco); border-radius: var(--radio); box-shadow: var(--sombra); overflow: hidden; }
+.resumen-header {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%);
+  border-bottom: 2px solid var(--rojo);
+  color: white; padding: 14px 20px;
+  font-size: 14px; font-weight: 700; letter-spacing: .03em;
+  display: flex; align-items: center; gap: 8px;
+}
+.pyg { padding: 14px 20px; }
+.pyg-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--gris-bg); font-size: 13px; }
+.pyg-row:last-child { border-bottom: none; }
+.pyg-row.total { font-weight: 700; font-size: 13.5px; }
+.pyg-row.subtotal { background: var(--plateado-bg); margin: 0 -20px; padding: 8px 20px; border-radius: 0; }
+.pyg-label { color: var(--texto2); }
+.pyg-row.total .pyg-label { color: var(--gris-oscuro); }
+.pyg-val { font-variant-numeric: tabular-nums; font-weight: 500; }
+.verde .pyg-val { color: var(--verde); }
+.rojo-val .pyg-val { color: var(--rojo-vivo); }
+.azul .pyg-val { color: var(--azul); }
+.pyg-indent .pyg-label { padding-left: 14px; font-size: 12px; color: var(--gris-claro); }
 
-  /* PANEL DERECHO */
-  .panel-der { display: flex; flex-direction: column; gap: 16px; }
+/* PANEL DERECHO */
+.panel-der { display: flex; flex-direction: column; gap: 14px; }
 
-  /* VEREDICTO */
-  .veredicto { border-radius: var(--radio); padding: 20px; box-shadow: var(--sombra); }
-  .veredicto.rentable { background: var(--verde-bg); border: 2px solid var(--verde-borde); }
-  .veredicto.fragil { background: var(--amarillo-bg); border: 2px solid var(--amarillo-borde); }
-  .veredicto.perdida { background: var(--rojo-bg); border: 2px solid var(--rojo-borde); }
-  .veredicto.pendiente { background: var(--gris-bg); border: 2px solid var(--gris-borde); }
-  .verd-titulo { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
-  .verd-margen { font-size: 32px; font-weight: 800; margin: 8px 0; }
-  .verd-texto { font-size: 13px; line-height: 1.5; }
-  .veredicto.rentable .verd-titulo, .veredicto.rentable .verd-margen { color: var(--verde); }
-  .veredicto.fragil .verd-titulo, .veredicto.fragil .verd-margen { color: var(--amarillo); }
-  .veredicto.perdida .verd-titulo, .veredicto.perdida .verd-margen { color: var(--rojo); }
-  .veredicto.pendiente .verd-titulo { color: var(--gris); }
+/* VEREDICTO */
+.veredicto { border-radius: var(--radio); padding: 18px; box-shadow: var(--sombra); }
+.veredicto.rentable { background: var(--verde-bg); border: 2px solid var(--verde-borde); }
+.veredicto.fragil { background: var(--amarillo-bg); border: 2px solid var(--amarillo-borde); }
+.veredicto.perdida { background: var(--rojo-claro); border: 2px solid var(--rojo-borde); }
+.veredicto.pendiente { background: var(--plateado-bg); border: 1.5px solid var(--gris-borde); }
+.verd-titulo { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+.verd-margen { font-size: 36px; font-weight: 900; margin: 6px 0; line-height: 1; }
+.verd-texto { font-size: 12px; line-height: 1.5; color: var(--gris-medio); }
+.veredicto.rentable .verd-titulo,.veredicto.rentable .verd-margen { color: var(--verde); }
+.veredicto.fragil .verd-titulo,.veredicto.fragil .verd-margen { color: var(--amarillo); }
+.veredicto.perdida .verd-titulo,.veredicto.perdida .verd-margen { color: var(--rojo); }
+.veredicto.pendiente .verd-titulo { color: var(--gris-medio); }
+.veredicto.pendiente .verd-margen { color: var(--plateado); }
 
-  /* BOTONES */
-  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 14px; border-radius: var(--radio); border: none; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s; }
-  .btn-generar { background: #1e3a5f; color: white; }
-  .btn-generar:hover { background: #1e40af; }
-  .btn-generar:disabled { background: var(--gris-borde); color: var(--texto2); cursor: not-allowed; }
-  .btn-pdf { background: var(--rojo); color: white; }
-  .btn-pdf:hover { background: #b91c1c; }
-  .btn-pdf:disabled { background: var(--gris-borde); color: var(--texto2); cursor: not-allowed; }
+/* BOTONES */
+.btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 13px; border-radius: var(--radio); border: none; font-size: 13.5px; font-weight: 700; cursor: pointer; transition: all .2s; letter-spacing: .02em; }
+.btn-generar { background: linear-gradient(135deg, #8B0000 0%, #C0392B 100%); color: white; box-shadow: 0 2px 8px rgba(139,0,0,.3); }
+.btn-generar:hover { background: linear-gradient(135deg, #a00000 0%, #d44 100%); box-shadow: 0 4px 16px rgba(139,0,0,.4); }
+.btn-generar:disabled { background: var(--gris-bg); color: var(--gris-claro); box-shadow: none; cursor: not-allowed; }
+.btn-pdf { background: var(--gris-oscuro); color: white; }
+.btn-pdf:hover { background: #111; }
+.btn-pdf:disabled { background: var(--gris-bg); color: var(--gris-claro); cursor: not-allowed; }
 
-  /* CONSECUTIVO */
-  .consecutivo-badge { background: var(--azul-bg); border: 1px solid var(--azul-borde); border-radius: 8px; padding: 12px 16px; text-align: center; display: none; }
-  .consecutivo-badge.visible { display: block; }
-  .consec-label { font-size: 11px; color: var(--azul); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
-  .consec-num { font-size: 24px; font-weight: 800; color: var(--azul); }
+/* CONSECUTIVO */
+.consec-badge { background: var(--azul-bg); border: 1.5px solid var(--azul-borde); border-radius: 9px; padding: 12px 16px; text-align: center; display: none; }
+.consec-badge.visible { display: block; }
+.consec-label { font-size: 10px; color: var(--azul); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.consec-num { font-size: 26px; font-weight: 900; color: var(--azul); }
 
-  /* MODAL */
-  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; display: none; }
-  .overlay.visible { display: flex; }
-  .modal { background: white; border-radius: 14px; width: 100%; max-width: 620px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
-  .modal-header { padding: 20px 24px; border-bottom: 1px solid var(--borde); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: white; z-index: 1; }
-  .modal-titulo { font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
-  .modal-icono { font-size: 24px; }
-  .modal-cerrar { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--borde); background: none; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; color: var(--texto2); }
-  .modal-cerrar:hover { background: var(--gris-bg); }
-  .modal-body { padding: 24px; }
-  .modal-footer { padding: 16px 24px; border-top: 1px solid var(--borde); display: flex; gap: 12px; justify-content: flex-end; sticky: bottom; background: white; }
-  .btn-sec { padding: 10px 20px; border-radius: 8px; border: 1px solid var(--borde); background: white; cursor: pointer; font-size: 14px; font-weight: 500; }
-  .btn-sec:hover { background: var(--gris-bg); }
-  .btn-pri { padding: 10px 20px; border-radius: 8px; border: none; background: var(--verde); color: white; cursor: pointer; font-size: 14px; font-weight: 600; }
-  .btn-pri:hover { background: #15803d; }
+/* MODAL */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
+.overlay.visible { display: flex; }
+.modal { background: var(--blanco); border-radius: 14px; width: 100%; max-width: 860px; max-height: 92vh; overflow-y: auto; box-shadow: 0 24px 64px rgba(0,0,0,.35); }
+.modal-header { padding: 18px 24px; border-bottom: 2px solid var(--rojo); background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 1; border-radius: 14px 14px 0 0; }
+.modal-titulo { font-size: 16px; font-weight: 700; color: white; display: flex; align-items: center; gap: 10px; }
+.modal-cerrar { width: 30px; height: 30px; border-radius: 50%; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.08); cursor: pointer; font-size: 15px; color: white; display: flex; align-items: center; justify-content: center; }
+.modal-cerrar:hover { background: rgba(255,255,255,.15); }
+.modal-body { padding: 24px; }
+.modal-footer { padding: 14px 24px; border-top: 1px solid var(--gris-borde); display: flex; gap: 10px; justify-content: flex-end; background: var(--gris-bg); border-radius: 0 0 14px 14px; }
+.btn-sec { padding: 10px 20px; border-radius: 8px; border: 1.5px solid var(--gris-borde); background: white; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--gris-medio); }
+.btn-sec:hover { background: var(--plateado-bg); }
+.btn-pri { padding: 10px 24px; border-radius: 8px; border: none; background: linear-gradient(135deg, #8B0000, #C0392B); color: white; cursor: pointer; font-size: 13px; font-weight: 700; box-shadow: 0 2px 8px rgba(139,0,0,.25); }
+.btn-pri:hover { background: linear-gradient(135deg, #a00000, #d44); }
 
-  /* FORMULARIO */
-  .form-section { margin-bottom: 20px; }
-  .form-section-title { font-size: 12px; font-weight: 600; color: var(--texto2); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--borde); }
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; }
-  .form-row.full { grid-template-columns: 1fr; }
-  .form-group { display: flex; flex-direction: column; gap: 4px; }
-  .form-label { font-size: 12px; font-weight: 500; color: var(--texto2); }
-  .form-input { padding: 9px 12px; border: 1px solid var(--borde); border-radius: 8px; font-size: 14px; color: var(--texto); transition: border .2s; }
-  .form-input:focus { outline: none; border-color: var(--azul); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
-  .form-input.numero { text-align: right; }
-  .form-hint { font-size: 11px; color: var(--texto2); margin-top: 2px; }
-  .form-total { background: var(--azul-bg); border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
-  .form-total-label { font-size: 13px; font-weight: 600; color: var(--azul); }
-  .form-total-val { font-size: 18px; font-weight: 800; color: var(--azul); }
+/* FORMULARIOS GENERALES */
+.form-section { margin-bottom: 20px; }
+.form-section-title { font-size: 11px; font-weight: 700; color: var(--rojo); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid var(--rojo-borde); display: flex; align-items: center; gap: 6px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+.form-row.full { grid-template-columns: 1fr; }
+.form-row.tres { grid-template-columns: 1fr 1fr 1fr; }
+.form-group { display: flex; flex-direction: column; gap: 4px; }
+.form-label { font-size: 11.5px; font-weight: 600; color: var(--gris-medio); }
+.form-input { padding: 9px 11px; border: 1.5px solid var(--gris-borde); border-radius: 7px; font-size: 13px; color: var(--texto); transition: border .2s; background: white; }
+.form-input:focus { outline: none; border-color: var(--rojo); box-shadow: 0 0 0 3px rgba(139,0,0,.08); }
+.form-input.numero { text-align: right; font-variant-numeric: tabular-nums; }
+.form-hint { font-size: 10.5px; color: var(--gris-claro); }
+.form-total-box { background: linear-gradient(135deg, #1a1a1a, #2c2c2c); border-radius: 9px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; margin-top: 16px; border-left: 4px solid var(--rojo); }
+.form-total-label { font-size: 12px; font-weight: 600; color: var(--plateado); }
+.form-total-val { font-size: 22px; font-weight: 900; color: white; }
 
-  /* TOAST */
-  .toast { position: fixed; bottom: 24px; right: 24px; background: #1e3a5f; color: white; padding: 12px 20px; border-radius: 10px; font-size: 14px; font-weight: 500; z-index: 999; opacity: 0; transform: translateY(10px); transition: all .3s; pointer-events: none; }
-  .toast.visible { opacity: 1; transform: translateY(0); }
-  .toast.error { background: var(--rojo); }
-  .toast.ok { background: var(--verde); }
+/* NOMINA HORIZONTAL — TABLA DE CARGOS */
+.nomina-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+.cargo-tab { padding: 7px 14px; border-radius: 20px; border: 1.5px solid var(--gris-borde); background: white; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--gris-medio); transition: all .2s; white-space: nowrap; }
+.cargo-tab:hover { border-color: var(--rojo); color: var(--rojo); }
+.cargo-tab.activo { background: var(--rojo); border-color: var(--rojo); color: white; }
+.cargo-tab.tiene-datos { border-color: var(--verde); color: var(--verde); }
+.cargo-tab.tiene-datos.activo { background: var(--verde); border-color: var(--verde); color: white; }
 
-  /* LOADING */
-  .loading { display: flex; align-items: center; justify-content: center; padding: 40px; gap: 12px; color: var(--texto2); font-size: 14px; }
-  .spinner { width: 20px; height: 20px; border: 2px solid var(--borde); border-top-color: var(--azul); border-radius: 50%; animation: spin .7s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+/* TABLA HORIZONTAL NÓMINA */
+.nomina-tabla-wrap { overflow-x: auto; border-radius: 10px; border: 1.5px solid var(--gris-borde); margin-bottom: 16px; }
+.nomina-tabla { width: 100%; border-collapse: collapse; min-width: 600px; }
+.nomina-tabla th { background: linear-gradient(135deg, #2c2c2c, #3a3a3a); color: var(--plateado); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 10px 14px; text-align: left; border-right: 1px solid #444; white-space: nowrap; }
+.nomina-tabla th:last-child { border-right: none; }
+.nomina-tabla td { padding: 10px 12px; border-bottom: 1px solid var(--gris-bg); border-right: 1px solid var(--gris-borde); vertical-align: middle; }
+.nomina-tabla td:last-child { border-right: none; }
+.nomina-tabla tr:last-child td { border-bottom: none; }
+.nomina-tabla tr:hover td { background: var(--plateado-bg); }
+.nomina-tabla .cargo-nombre { font-size: 12.5px; font-weight: 600; color: var(--gris-oscuro); white-space: nowrap; }
+.nomina-tabla .cargo-sub { font-size: 10.5px; color: var(--gris-claro); }
+.nomina-tabla input { width: 100%; padding: 6px 8px; border: 1.5px solid var(--gris-borde); border-radius: 6px; font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; background: white; color: var(--texto); }
+.nomina-tabla input:focus { outline: none; border-color: var(--rojo); background: #fff8f8; }
+.nomina-tabla .fila-total { background: var(--plateado-bg); font-weight: 700; }
+.nomina-tabla .fila-total td { color: var(--gris-oscuro); font-size: 12.5px; }
+.nomina-tabla .tag-cargo { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; margin-top: 3px; }
+.tag-g { background: #e0f2fe; color: #0369a1; }
+.tag-m { background: #fef9c3; color: #854d0e; }
+.tag-o { background: #f3e8ff; color: #7c3aed; }
+.tag-c { background: #fee2e2; color: #b91c1c; }
+.tag-s { background: #dcfce7; color: #15803d; }
+
+/* RESUMEN NÓMINA */
+.nomina-resumen-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 14px; }
+.nom-res-card { background: var(--plateado-bg); border-radius: 8px; padding: 10px 12px; border: 1px solid var(--gris-borde); }
+.nom-res-label { font-size: 10px; color: var(--gris-claro); font-weight: 600; margin-bottom: 4px; text-transform: uppercase; }
+.nom-res-val { font-size: 14px; font-weight: 800; color: var(--gris-oscuro); }
+.nom-res-card.activo { border-color: var(--rojo-borde); background: var(--rojo-claro); }
+.nom-res-card.activo .nom-res-val { color: var(--rojo); }
+
+/* TOAST */
+.toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 10px; font-size: 13px; font-weight: 600; z-index: 999; opacity: 0; transform: translateY(10px); transition: all .3s; pointer-events: none; box-shadow: var(--sombra-md); }
+.toast.visible { opacity: 1; transform: translateY(0); }
+.toast.ok { background: #15803d; color: white; }
+.toast.error { background: var(--rojo); color: white; }
+.toast.info { background: var(--gris-oscuro); color: white; }
+
+/* LOADING */
+.loading { display: flex; align-items: center; justify-content: center; padding: 40px; gap: 12px; color: var(--gris-claro); font-size: 13px; }
+.spinner { width: 18px; height: 18px; border: 2px solid var(--gris-borde); border-top-color: var(--rojo); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
 
 <!-- HEADER -->
-<div class="header">
-  <div>
-    <h1>Análisis de Rentabilidad — Vigilancia</h1>
-    <p>Ruitoque UIC · Diligencie cada módulo para generar el análisis</p>
+<header class="header">
+  <div class="header-left">
+    <img src="data:image/png;base64,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" class="logo-img" alt="Delthac1 Seguridad">
+    <div class="header-divider"></div>
+    <div class="header-title">
+      <h1>Análisis de Rentabilidad</h1>
+      <p>Ruitoque UIC · Sistema de viabilidad operativa</p>
+    </div>
   </div>
   <div class="header-right">
-    <div class="sync-dot" id="sync-dot"></div>
-    <span class="sync-label" id="sync-label">Conectando...</span>
+    <div class="sync-pill">
+      <div class="sync-dot" id="sync-dot"></div>
+      <span class="sync-label" id="sync-label">Conectando...</span>
+    </div>
   </div>
-</div>
+</header>
 
 <div class="main">
 
-  <!-- BARRA DE PROGRESO -->
-  <div class="progreso-bar">
-    <div class="progreso-texto">
+  <!-- PROGRESO -->
+  <div class="progreso-wrap">
+    <div class="progreso-info">
       <h2 id="progreso-titulo">Cargando módulos...</h2>
+      <p>Diligencie cada módulo para habilitar el análisis</p>
     </div>
-    <div class="progreso-track" style="flex:1">
-      <div class="progreso-fill" id="progreso-fill" style="width:0%"></div>
-    </div>
+    <div class="progreso-track"><div class="progreso-fill" id="progreso-fill" style="width:0%"></div></div>
     <div class="progreso-pct" id="progreso-pct">0%</div>
   </div>
 
-  <!-- GRID DE MÓDULOS -->
+  <!-- MÓDULOS -->
   <div class="grid" id="grid-modulos">
-    <div class="loading"><div class="spinner"></div> Cargando módulos...</div>
+    <div class="loading"><div class="spinner"></div> Conectando con Supabase...</div>
   </div>
 
   <!-- PANEL INFERIOR -->
   <div class="panel-bottom">
-
-    <!-- P&G -->
     <div class="resumen">
-      <div class="resumen-header">Estado de Resultados</div>
+      <div class="resumen-header">📊 Estado de Resultados</div>
       <div class="pyg" id="pyg-container">
-        <div style="padding:20px 0; text-align:center; color:var(--texto2); font-size:13px">
-          Complete los módulos para ver el estado de resultados
-        </div>
+        <div style="padding:24px 0;text-align:center;color:var(--gris-claro);font-size:13px">Complete los módulos para ver el estado de resultados</div>
       </div>
     </div>
 
-    <!-- PANEL DERECHO -->
     <div class="panel-der">
-
-      <!-- VEREDICTO -->
       <div class="veredicto pendiente" id="veredicto-card">
         <div class="verd-titulo" id="verd-titulo">Pendiente</div>
         <div class="verd-margen" id="verd-margen">--%</div>
         <div class="verd-texto" id="verd-texto">Complete todos los módulos para ver el análisis de viabilidad.</div>
       </div>
 
-      <!-- CONSECUTIVO -->
-      <div class="consecutivo-badge" id="consec-badge">
+      <div class="consec-badge" id="consec-badge">
         <div class="consec-label">Análisis generado</div>
         <div class="consec-num" id="consec-num">ANL-000</div>
-        <div style="font-size:12px;color:var(--azul);margin-top:4px" id="consec-fecha"></div>
+        <div style="font-size:11px;color:var(--azul);margin-top:4px" id="consec-fecha"></div>
       </div>
 
-      <!-- BOTONES -->
-      <button class="btn btn-generar" id="btn-generar" disabled onclick="generarAnalisis()">
-        ✦ Generar análisis
-      </button>
-      <button class="btn btn-pdf" id="btn-pdf" disabled onclick="exportarPDF()">
-        ↓ Exportar PDF
-      </button>
-
+      <button class="btn btn-generar" id="btn-generar" disabled onclick="generarAnalisis()">✦ Generar análisis</button>
+      <button class="btn btn-pdf" id="btn-pdf" disabled onclick="exportarPDF()">↓ Exportar PDF</button>
     </div>
   </div>
 </div>
@@ -231,82 +321,86 @@
 <div class="overlay" id="overlay" onclick="cerrarModal(event)">
   <div class="modal" id="modal">
     <div class="modal-header">
-      <div class="modal-titulo">
-        <span class="modal-icono" id="modal-icono"></span>
-        <span id="modal-titulo-texto"></span>
-      </div>
+      <div class="modal-titulo"><span id="modal-icono"></span><span id="modal-titulo-texto"></span></div>
       <button class="modal-cerrar" onclick="cerrarModal()">✕</button>
     </div>
     <div class="modal-body" id="modal-body"></div>
     <div class="modal-footer">
       <button class="btn-sec" onclick="cerrarModal()">Cancelar</button>
-      <button class="btn-pri" id="btn-guardar" onclick="guardarModulo()">Guardar módulo</button>
+      <button class="btn-pri" onclick="guardarModulo()">Guardar módulo ✓</button>
     </div>
   </div>
 </div>
 
-<!-- TOAST -->
 <div class="toast" id="toast"></div>
 
 <script>
-// ─── SUPABASE CONFIG ───────────────────────────────────────────────────────
 const SUPA_URL = 'https://dkcuezhphirkirnmdwdo.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRrY3VlemhwaGlya2lybm1kd2RvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MDkzNDksImV4cCI6MjA5Nzk4NTM0OX0.LPH9UJI5-ASAt6bHpJoiUTWcuOSWCNlxHn3-rycXIYE';
-const supa = supabase.createClient(SUPA_URL, SUPA_KEY);
 
-// ─── ESTADO GLOBAL ─────────────────────────────────────────────────────────
+const H = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+const API = (path) => SUPA_URL + '/rest/v1/' + path;
+
+async function dbGet(tabla, query='') {
+  const r = await fetch(API(tabla + '?select=*' + (query ? '&' + query : '')), { headers: H });
+  return r.json();
+}
+async function dbPatch(tabla, col, val, body) {
+  const r = await fetch(API(tabla + '?' + col + '=eq.' + encodeURIComponent(val)), { method:'PATCH', headers: H, body: JSON.stringify(body) });
+  return r.json();
+}
+async function dbPost(tabla, body) {
+  const r = await fetch(API(tabla), { method:'POST', headers: H, body: JSON.stringify(body) });
+  return r.json();
+}
+async function dbGetOne(tabla, query) {
+  const r = await fetch(API(tabla + '?' + query + '&limit=1'), { headers: H });
+  return r.json();
+}
+
 let modulos = [];
 let moduloActivo = null;
 let consecutivoActual = null;
 
-// ─── DEFINICIÓN DE MÓDULOS ──────────────────────────────────────────────────
+// CARGOS PARA NÓMINA
+const CARGOS = [
+  { id:'guardia', nombre:'Guardia de Seguridad', tag:'G', tagClass:'tag-g', rodamiento: false },
+  { id:'guardia_movil', nombre:'Guardia Móvil', tag:'GM', tagClass:'tag-m', rodamiento: true },
+  { id:'operador_mt', nombre:'Operador MT', tag:'OMT', tagClass:'tag-o', rodamiento: false },
+  { id:'coordinador', nombre:'Coordinador de Contrato', tag:'CC', tagClass:'tag-c', rodamiento: false },
+  { id:'supervisor', nombre:'Supervisor', tag:'SUP', tagClass:'tag-s', rodamiento: true },
+];
+
+const CAMPOS_NOMINA = [
+  { id:'cantidad', label:'Cantidad', tipo:'numero', default:0 },
+  { id:'salario', label:'Salario base', tipo:'numero', default:1423500 },
+  { id:'extras', label:'Horas extras', tipo:'numero', default:0 },
+  { id:'rodamiento', label:'Rodamiento', tipo:'numero', default:0 },
+  { id:'transporte', label:'Aux. transporte', tipo:'numero', default:200000 },
+  { id:'factor', label:'Factor prest. %', tipo:'numero', default:52.19 },
+];
+
 const DEFS = {
   ingresos: {
-    icono: '💰', nombre: 'Ingresos del contrato',
-    campos: [
-      { id:'valor_contrato', label:'Valor mensual del contrato', tipo:'numero', hint:'Valor total facturado al cliente' },
-      { id:'aiu_pct', label:'AIU (%)', tipo:'numero', hint:'Administración, Imprevistos y Utilidad', default:10 },
+    icono:'💰', nombre:'Ingresos del contrato',
+    campos:[
+      { id:'valor_contrato', label:'Valor mensual del contrato', tipo:'numero' },
+      { id:'aiu_pct', label:'AIU aplicado (%)', tipo:'numero', default:10 },
       { id:'incluye_electronico', label:'¿Incluye servicios electrónicos?', tipo:'select', opciones:['No','Sí'] },
-      { id:'valor_electronico', label:'Valor servicios electrónicos', tipo:'numero', hint:'Si aplica', default:0 },
+      { id:'valor_electronico', label:'Valor servicios electrónicos', tipo:'numero', default:0 },
     ],
     calcular(d) {
       const base = num(d.valor_contrato);
       const elec = d.incluye_electronico === 'Sí' ? num(d.valor_electronico) : 0;
-      return { total: base + elec, detalle: `Contrato $${fmt(base)}${elec ? ` + Electrónico $${fmt(elec)}` : ''}` };
+      return { total: base + elec, detalle: '$' + fmt(base + elec) + '/mes' };
     }
   },
-  nomina: {
-    icono: '👷', nombre: 'Nómina operativa',
-    campos: [
-      { seccion: 'Vigilantes' },
-      { id:'vig_cantidad', label:'Cantidad de vigilantes', tipo:'numero', default:20 },
-      { id:'vig_salario', label:'Salario base c/u', tipo:'numero', default:1423500 },
-      { id:'vig_extras', label:'Horas extras c/u', tipo:'numero', default:1000000 },
-      { id:'vig_rodamiento', label:'Rodamiento c/u', tipo:'numero', default:0 },
-      { id:'vig_transporte', label:'Aux. transporte c/u', tipo:'numero', default:200000 },
-      { id:'vig_factor', label:'Factor prestacional (%)', tipo:'numero', default:52.19, hint:'Cesantías, prima, vacaciones, SS' },
-      { seccion: 'Supervisores' },
-      { id:'sup_cantidad', label:'Cantidad de supervisores', tipo:'numero', default:3 },
-      { id:'sup_salario', label:'Salario base c/u', tipo:'numero', default:1423500 },
-      { id:'sup_extras', label:'Horas extras c/u', tipo:'numero', default:1500000 },
-      { id:'sup_rodamiento', label:'Rodamiento c/u', tipo:'numero', default:550000 },
-      { id:'sup_factor', label:'Factor prestacional (%)', tipo:'numero', default:52.19 },
-    ],
-    calcular(d) {
-      const nVig = num(d.vig_cantidad);
-      const devVig = (num(d.vig_salario) + num(d.vig_extras) + num(d.vig_rodamiento) + num(d.vig_transporte)) * nVig;
-      const costoVig = devVig * (1 + num(d.vig_factor) / 100);
-      const nSup = num(d.sup_cantidad);
-      const devSup = (num(d.sup_salario) + num(d.sup_extras) + num(d.sup_rodamiento)) * nSup;
-      const costoSup = devSup * (1 + num(d.sup_factor) / 100);
-      return { total: costoVig + costoSup, detalle: `${nVig} vigilantes + ${nSup} supervisores`, costoVig, costoSup };
-    }
-  },
+  nomina: { icono:'👷', nombre:'Nómina operativa', esNomina: true },
   dotacion: {
-    icono: '👔', nombre: 'Dotación y equipos',
-    campos: [
+    icono:'👔', nombre:'Dotación y equipos',
+    campos:[
       { id:'uniformes', label:'Uniformes y calzado', tipo:'numero', default:0 },
-      { id:'chalecos', label:'Chalecos antibalas y multiproposito', tipo:'numero', default:0 },
+      { id:'chalecos', label:'Chalecos antibalas/multipropósito', tipo:'numero', default:0 },
       { id:'bodycam', label:'Cámaras bodycam', tipo:'numero', default:0 },
       { id:'linternas', label:'Linternas tácticas', tipo:'numero', default:0 },
       { id:'bastones', label:'Bastones / tonfas', tipo:'numero', default:0 },
@@ -314,326 +408,413 @@ const DEFS = {
       { id:'otros_dot', label:'Otros equipos', tipo:'numero', default:0 },
     ],
     calcular(d) {
-      const total = ['uniformes','chalecos','bodycam','linternas','bastones','botiquin','otros_dot'].reduce((s,k) => s + num(d[k]), 0);
-      return { total, detalle: `$${fmt(total)}/mes` };
+      const total = ['uniformes','chalecos','bodycam','linternas','bastones','botiquin','otros_dot'].reduce((s,k)=>s+num(d[k]),0);
+      return { total, detalle: '$' + fmt(total) + '/mes' };
     }
   },
   comunicaciones: {
-    icono: '📡', nombre: 'Comunicaciones',
-    campos: [
-      { id:'radios_cantidad', label:'Cantidad de radios POC', tipo:'numero', default:32 },
-      { id:'radios_valor', label:'Amortización radios (mensual)', tipo:'numero', default:530480 },
+    icono:'📡', nombre:'Comunicaciones',
+    campos:[
+      { id:'radios_cant', label:'Cantidad radios POC', tipo:'numero', default:32 },
+      { id:'amort_radios', label:'Amortización radios', tipo:'numero', default:530480 },
       { id:'plan_datos', label:'Plan de datos total', tipo:'numero', default:700800 },
-      { id:'celulares', label:'Celulares y smartphones', tipo:'numero', default:0 },
-      { id:'otros_com', label:'Otros (mantenimiento, accesorios)', tipo:'numero', default:0 },
+      { id:'celulares', label:'Celulares / smartphones', tipo:'numero', default:0 },
+      { id:'otros_com', label:'Otros comunicaciones', tipo:'numero', default:0 },
     ],
     calcular(d) {
-      const total = ['radios_valor','plan_datos','celulares','otros_com'].reduce((s,k) => s + num(d[k]), 0);
-      return { total, detalle: `${num(d.radios_cantidad)} radios · $${fmt(total)}/mes` };
+      const total = ['amort_radios','plan_datos','celulares','otros_com'].reduce((s,k)=>s+num(d[k]),0);
+      return { total, detalle: num(d.radios_cant) + ' radios · $' + fmt(total) + '/mes' };
     }
   },
   vehiculos: {
-    icono: '🚗', nombre: 'Vehículos',
-    campos: [
-      { seccion: 'Vehículo propio' },
-      { id:'vp_seguro', label:'Seguro todo riesgo (mensual)', tipo:'numero', default:362456 },
+    icono:'🚗', nombre:'Vehículos',
+    campos:[
+      { seccion:'Vehículo propio' },
+      { id:'vp_seguro', label:'Seguro todo riesgo', tipo:'numero', default:362456 },
       { id:'vp_soat', label:'SOAT (mensual)', tipo:'numero', default:78592 },
-      { id:'vp_impuesto', label:'Impuesto vehicular (mensual)', tipo:'numero', default:580388 },
+      { id:'vp_impuesto', label:'Impuesto vehicular', tipo:'numero', default:580388 },
       { id:'vp_depreciacion', label:'Depreciación mensual', tipo:'numero', default:1658250 },
       { id:'vp_tramites', label:'Trámites y otros', tipo:'numero', default:0 },
-      { seccion: 'Vehículo arrendado' },
+      { seccion:'Vehículo arrendado' },
       { id:'va_canon', label:'Canon de arrendamiento', tipo:'numero', default:3270000 },
       { id:'va_soat', label:'SOAT (mensual)', tipo:'numero', default:49483 },
       { id:'va_combustible', label:'Combustible', tipo:'numero', default:556140 },
     ],
     calcular(d) {
-      const vp = ['vp_seguro','vp_soat','vp_impuesto','vp_depreciacion','vp_tramites'].reduce((s,k) => s + num(d[k]), 0);
-      const va = ['va_canon','va_soat','va_combustible'].reduce((s,k) => s + num(d[k]), 0);
-      return { total: vp + va, detalle: `Propio $${fmt(vp)} + Arriendo $${fmt(va)}` };
+      const vp = ['vp_seguro','vp_soat','vp_impuesto','vp_depreciacion','vp_tramites'].reduce((s,k)=>s+num(d[k]),0);
+      const va = ['va_canon','va_soat','va_combustible'].reduce((s,k)=>s+num(d[k]),0);
+      return { total: vp + va, detalle: 'Propio $' + fmt(vp) + ' + Arriendo $' + fmt(va) };
     }
   },
   logistica: {
-    icono: '📦', nombre: 'Logística',
-    campos: [
-      { id:'placas_blindadas', label:'Placas blindadas (amortización)', tipo:'numero', default:575159 },
-      { id:'drone', label:'Drone (amortización mensual)', tipo:'numero', default:1052500 },
-      { id:'minutas', label:'Libros minuta y papelería', tipo:'numero', default:78400 },
+    icono:'📦', nombre:'Logística',
+    campos:[
+      { id:'placas', label:'Placas blindadas (amort.)', tipo:'numero', default:575159 },
+      { id:'drone', label:'Drone (amortización)', tipo:'numero', default:1052500 },
+      { id:'minutas', label:'Minutas y papelería', tipo:'numero', default:78400 },
       { id:'examenes', label:'Exámenes y polígrafo', tipo:'numero', default:407733 },
       { id:'otros_log', label:'Otros logística', tipo:'numero', default:0 },
     ],
     calcular(d) {
-      const total = ['placas_blindadas','drone','minutas','examenes','otros_log'].reduce((s,k) => s + num(d[k]), 0);
-      return { total, detalle: `$${fmt(total)}/mes` };
+      const total = ['placas','drone','minutas','examenes','otros_log'].reduce((s,k)=>s+num(d[k]),0);
+      return { total, detalle: '$' + fmt(total) + '/mes' };
     }
   },
   caninos: {
-    icono: '🐕', nombre: 'Caninos / binomios',
-    campos: [
-      { id:'can_manutension', label:'Manutención mensual total', tipo:'numero', default:219575 },
-      { id:'can_amortizacion', label:'Amortización caninos (mensual)', tipo:'numero', default:18333 },
-      { id:'can_transporte', label:'Transporte caninos', tipo:'numero', default:0 },
-      { id:'can_otros', label:'Otros caninos', tipo:'numero', default:0 },
+    icono:'🐕', nombre:'Caninos / binomios',
+    campos:[
+      { id:'manutension', label:'Manutención mensual', tipo:'numero', default:219575 },
+      { id:'amortizacion', label:'Amortización caninos', tipo:'numero', default:18333 },
+      { id:'transporte', label:'Transporte', tipo:'numero', default:0 },
+      { id:'otros_can', label:'Otros', tipo:'numero', default:0 },
     ],
     calcular(d) {
-      const total = ['can_manutension','can_amortizacion','can_transporte','can_otros'].reduce((s,k) => s + num(d[k]), 0);
-      return { total, detalle: `$${fmt(total)}/mes` };
+      const total = ['manutension','amortizacion','transporte','otros_can'].reduce((s,k)=>s+num(d[k]),0);
+      return { total, detalle: '$' + fmt(total) + '/mes' };
     }
   },
   capacitacion: {
-    icono: '🎓', nombre: 'Capacitación',
-    campos: [
-      { id:'cap_reentrenamiento', label:'Reentrenamiento vigilancia', tipo:'numero', default:0 },
-      { id:'cap_supervisores', label:'Capacitación supervisores', tipo:'numero', default:0 },
-      { id:'cap_caninos', label:'Capacitación manejador canino', tipo:'numero', default:0 },
+    icono:'🎓', nombre:'Capacitación',
+    campos:[
+      { id:'reentren', label:'Reentrenamiento vigilancia', tipo:'numero', default:0 },
+      { id:'cap_sup', label:'Capacitación supervisores', tipo:'numero', default:0 },
+      { id:'cap_can', label:'Manejador canino', tipo:'numero', default:0 },
       { id:'cap_otros', label:'Otros cursos', tipo:'numero', default:0 },
     ],
     calcular(d) {
-      const total = ['cap_reentrenamiento','cap_supervisores','cap_caninos','cap_otros'].reduce((s,k) => s + num(d[k]), 0);
-      return { total, detalle: `$${fmt(total)}/mes` };
+      const total = ['reentren','cap_sup','cap_can','cap_otros'].reduce((s,k)=>s+num(d[k]),0);
+      return { total, detalle: '$' + fmt(total) + '/mes' };
     }
   },
   polizas: {
-    icono: '🛡️', nombre: 'Pólizas',
-    campos: [
+    icono:'🛡️', nombre:'Pólizas',
+    campos:[
       { id:'pol_rce', label:'Póliza RCE (mensual)', tipo:'numero', default:499636 },
-      { id:'pol_cumplimiento', label:'Póliza cumplimiento (mensual)', tipo:'numero', default:745463 },
-      { id:'pol_salarios', label:'Póliza salarios (mensual)', tipo:'numero', default:0 },
+      { id:'pol_cumplimiento', label:'Póliza cumplimiento', tipo:'numero', default:745463 },
+      { id:'pol_salarios', label:'Póliza salarios', tipo:'numero', default:0 },
       { id:'pol_otras', label:'Otras pólizas', tipo:'numero', default:0 },
     ],
     calcular(d) {
-      const total = ['pol_rce','pol_cumplimiento','pol_salarios','pol_otras'].reduce((s,k) => s + num(d[k]), 0);
-      return { total, detalle: `$${fmt(total)}/mes` };
+      const total = ['pol_rce','pol_cumplimiento','pol_salarios','pol_otras'].reduce((s,k)=>s+num(d[k]),0);
+      return { total, detalle: '$' + fmt(total) + '/mes' };
     }
   },
   gastos_admin: {
-    icono: '🏢', nombre: 'Gastos administrativos',
-    campos: [
-      { id:'adm_pct', label:'Como % de ingresos', tipo:'numero', default:8.9, hint:'Forma más común de calcularlo' },
-      { id:'adm_fijo', label:'O ingrese valor fijo mensual', tipo:'numero', default:0, hint:'Si prefieres usar un monto fijo déjalo aquí y pon 0% arriba' },
+    icono:'🏢', nombre:'Gastos administrativos',
+    campos:[
+      { id:'adm_pct', label:'Como % de ingresos', tipo:'numero', default:8.9 },
+      { id:'adm_fijo', label:'O valor fijo mensual', tipo:'numero', default:0 },
     ],
     calcular(d, totalIngresos) {
-      const porPct = (totalIngresos || 0) * num(d.adm_pct) / 100;
+      const pct = (totalIngresos || 0) * num(d.adm_pct) / 100;
       const fijo = num(d.adm_fijo);
-      const total = fijo > 0 ? fijo : porPct;
-      return { total, detalle: fijo > 0 ? `Valor fijo $${fmt(fijo)}` : `${num(d.adm_pct)}% de ingresos` };
+      const total = fijo > 0 ? fijo : pct;
+      return { total, detalle: fijo > 0 ? 'Fijo $' + fmt(fijo) : num(d.adm_pct) + '% de ingresos' };
     }
   }
 };
 
-// ─── UTILIDADES ─────────────────────────────────────────────────────────────
-const num = v => parseFloat(v) || 0;
+const num = v => parseFloat(String(v).replace(/[^0-9.-]/g,'')) || 0;
 const fmt = v => Math.round(v).toLocaleString('es-CO');
 const fmtCOP = v => (v < 0 ? '-$' : '$') + fmt(Math.abs(v));
 
-function toast(msg, tipo = '') {
+function toast(msg, tipo='info') {
   const el = document.getElementById('toast');
   el.textContent = msg;
-  el.className = 'toast visible' + (tipo ? ' ' + tipo : '');
-  setTimeout(() => el.className = 'toast', 3000);
+  el.className = 'toast visible ' + tipo;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.className = 'toast', 3500);
 }
 
-// ─── CARGA INICIAL ──────────────────────────────────────────────────────────
+// INIT
 async function init() {
   try {
-    const { data, error } = await supa.from('modulos').select('*');
-    if (error) throw error;
+    const data = await dbGet('modulos');
+    if (!Array.isArray(data)) throw new Error(JSON.stringify(data));
     modulos = data;
-    document.getElementById('sync-dot').className = 'sync-dot';
+    document.getElementById('sync-dot').className = 'sync-dot ok';
     document.getElementById('sync-label').textContent = 'Conectado';
     renderModulos();
     actualizarResumen();
   } catch(e) {
     document.getElementById('sync-dot').className = 'sync-dot error';
     document.getElementById('sync-label').textContent = 'Sin conexión';
-    toast('Error conectando con Supabase. Verifica la URL y las tablas.', 'error');
-    console.error(e);
+    toast('Error: ' + e.message, 'error');
+    document.getElementById('grid-modulos').innerHTML =
+      '<div style="grid-column:1/-1;padding:20px;background:var(--rojo-claro);border-radius:10px;border:1.5px solid var(--rojo-borde);color:var(--rojo);font-size:13px"><strong>Error de conexión:</strong><br>' + e.message + '</div>';
   }
 }
 
-// ─── RENDER MÓDULOS ─────────────────────────────────────────────────────────
+// RENDER MÓDULOS
 function renderModulos() {
   const total = modulos.length;
   const completos = modulos.filter(m => m.completado).length;
   const pct = Math.round((completos / total) * 100);
-
   document.getElementById('progreso-fill').style.width = pct + '%';
   document.getElementById('progreso-pct').textContent = pct + '%';
   document.getElementById('progreso-titulo').textContent =
-    completos === total ? '¡Todos los módulos completos!' :
-    `${completos} de ${total} módulos completados`;
+    completos === total ? '¡Todos los módulos completos! Genera el análisis.' :
+    completos + ' de ' + total + ' módulos completados';
 
-  const grid = document.getElementById('grid-modulos');
-  grid.innerHTML = modulos.map(m => {
+  document.getElementById('grid-modulos').innerHTML = modulos.map(m => {
     const def = DEFS[m.id];
     if (!def) return '';
-    const datos = m.datos || {};
     let resumen = '';
-    if (m.completado && def.calcular) {
+    if (m.completado) {
       try {
-        const ingM = modulos.find(x => x.id === 'ingresos');
-        const ingDatos = ingM?.datos || {};
-        const ingCalc = DEFS.ingresos.calcular(ingDatos);
-        const calc = def.calcular(datos, ingCalc.total);
-        resumen = calc.detalle || '';
+        if (def.esNomina) {
+          const datos = m.datos || {};
+          const total = calcularNominaTotal(datos);
+          resumen = '$' + fmt(total) + '/mes · ' + totalPersonas(datos) + ' personas';
+        } else if (def.calcular) {
+          const ingM = modulos.find(x => x.id === 'ingresos');
+          const ingCalc = ingM?.completado ? DEFS.ingresos.calcular(ingM.datos || {}) : { total: 0 };
+          resumen = def.calcular(m.datos || {}, ingCalc.total).detalle;
+        }
       } catch(e) {}
     }
-    return `
-    <div class="modulo ${m.completado ? 'completo' : ''}" onclick="abrirModulo('${m.id}')">
-      <div class="modulo-header">
-        <div class="modulo-icono">${def.icono}</div>
-        <div class="modulo-info">
-          <div class="modulo-nombre">${def.nombre}</div>
-          <div class="modulo-estado">${m.completado ? 'Completado · haz clic para editar' : 'Pendiente · haz clic para diligenciar'}</div>
-        </div>
-        <div class="modulo-check">${m.completado ? '✓' : ''}</div>
-      </div>
-      ${resumen ? `<div class="modulo-resumen">${resumen}</div>` : ''}
-    </div>`;
+    return '<div class="modulo ' + (m.completado ? 'completo' : '') + '" onclick="abrirModulo('' + m.id + '')">' +
+      '<div class="modulo-header">' +
+        '<div class="modulo-icono">' + def.icono + '</div>' +
+        '<div class="modulo-info">' +
+          '<div class="modulo-nombre">' + def.nombre + '</div>' +
+          '<div class="modulo-estado">' + (m.completado ? 'Completado · clic para editar' : 'Pendiente · clic para diligenciar') + '</div>' +
+        '</div>' +
+        '<div class="modulo-check">' + (m.completado ? '✓' : '') + '</div>' +
+      '</div>' +
+      (resumen ? '<div class="modulo-resumen">' + resumen + '</div>' : '') +
+    '</div>';
   }).join('');
 
-  const todoCompleto = completos === total;
-  document.getElementById('btn-generar').disabled = !todoCompleto;
+  document.getElementById('btn-generar').disabled = completos !== total;
 }
 
-// ─── ABRIR MODAL ────────────────────────────────────────────────────────────
+function calcularNominaTotal(datos) {
+  return CARGOS.reduce((sum, cargo) => {
+    const d = datos[cargo.id] || {};
+    const cant = num(d.cantidad);
+    if (cant === 0) return sum;
+    const devengado = (num(d.salario) + num(d.extras) + num(d.rodamiento) + num(d.transporte)) * cant;
+    return sum + devengado * (1 + num(d.factor || 52.19) / 100);
+  }, 0);
+}
+
+function totalPersonas(datos) {
+  return CARGOS.reduce((sum, c) => sum + num((datos[c.id] || {}).cantidad), 0);
+}
+
+// ABRIR MODAL
 function abrirModulo(id) {
   moduloActivo = id;
   const def = DEFS[id];
   const modulo = modulos.find(m => m.id === id);
   const datos = modulo?.datos || {};
-
-  document.getElementById('modal-icono').textContent = def.icono;
+  document.getElementById('modal-icono').textContent = def.icono + ' ';
   document.getElementById('modal-titulo-texto').textContent = def.nombre;
-  document.getElementById('modal-body').innerHTML = buildForm(id, def, datos);
+  document.getElementById('modal-body').innerHTML = def.esNomina ? buildFormNomina(datos) : buildForm(id, def, datos);
   document.getElementById('overlay').classList.add('visible');
-
-  // calcular total inicial
-  setTimeout(() => calcularTotal(id), 50);
+  if (!def.esNomina) setTimeout(() => calcularTotal(id), 50);
+  else setTimeout(() => actualizarResumenNomina(), 50);
 }
 
+// FORM NÓMINA HORIZONTAL
+function buildFormNomina(datos) {
+  let rows = CARGOS.map(cargo => {
+    const d = datos[cargo.id] || {};
+    const campos = CAMPOS_NOMINA.map(campo => {
+      const val = d[campo.id] !== undefined ? d[campo.id] : (campo.default || 0);
+      return '<td><input type="number" id="n_' + cargo.id + '_' + campo.id + '" value="' + val + '" ' +
+        'oninput="actualizarFilaNomina('' + cargo.id + '')" placeholder="0"></td>';
+    }).join('');
+    return '<tr id="fila_' + cargo.id + '">' +
+      '<td><div class="cargo-nombre">' + cargo.nombre + '</div>' +
+        '<span class="tag-cargo ' + cargo.tagClass + '">' + cargo.tag + '</span>' +
+      '</td>' +
+      campos +
+      '<td style="text-align:right;font-weight:700;color:var(--gris-oscuro)" id="subtotal_' + cargo.id + '">$0</td>' +
+    '</tr>';
+  }).join('');
+
+  return '<div style="margin-bottom:14px">' +
+    '<p style="font-size:12px;color:var(--gris-medio);margin-bottom:10px">Diligencie los datos de cada cargo. El costo total incluye el factor prestacional automáticamente.</p>' +
+    '<div class="nomina-resumen-grid">' +
+      CARGOS.map(c => '<div class="nom-res-card" id="res_' + c.id + '">' +
+        '<div class="nom-res-label">' + c.nombre + '</div>' +
+        '<div class="nom-res-val" id="res_val_' + c.id + '">$0</div>' +
+      '</div>').join('') +
+    '</div>' +
+  '</div>' +
+  '<div class="nomina-tabla-wrap">' +
+    '<table class="nomina-tabla">' +
+      '<thead><tr>' +
+        '<th style="min-width:160px">Cargo</th>' +
+        '<th>Cantidad</th><th>Salario base</th><th>Horas extras</th><th>Rodamiento</th><th>Aux. transporte</th><th>Factor prest. %</th>' +
+        '<th style="text-align:right">Costo total</th>' +
+      '</tr></thead>' +
+      '<tbody>' + rows + '</tbody>' +
+    '</table>' +
+  '</div>' +
+  '<div class="form-total-box">' +
+    '<span class="form-total-label">Total nómina operativa mensual</span>' +
+    '<span class="form-total-val" id="nomina-grand-total">$0</span>' +
+  '</div>';
+}
+
+function actualizarFilaNomina(cargoId) {
+  const cant = num(document.getElementById('n_' + cargoId + '_cantidad')?.value);
+  const sal = num(document.getElementById('n_' + cargoId + '_salario')?.value);
+  const ext = num(document.getElementById('n_' + cargoId + '_extras')?.value);
+  const rod = num(document.getElementById('n_' + cargoId + '_rodamiento')?.value);
+  const tra = num(document.getElementById('n_' + cargoId + '_transporte')?.value);
+  const fac = num(document.getElementById('n_' + cargoId + '_factor')?.value || 52.19);
+  const devengado = (sal + ext + rod + tra) * cant;
+  const total = devengado * (1 + fac / 100);
+  const el = document.getElementById('subtotal_' + cargoId);
+  if (el) el.textContent = fmtCOP(total);
+  actualizarResumenNomina();
+}
+
+function actualizarResumenNomina() {
+  let grandTotal = 0;
+  CARGOS.forEach(cargo => {
+    const cant = num(document.getElementById('n_' + cargo.id + '_cantidad')?.value);
+    const sal = num(document.getElementById('n_' + cargo.id + '_salario')?.value);
+    const ext = num(document.getElementById('n_' + cargo.id + '_extras')?.value);
+    const rod = num(document.getElementById('n_' + cargo.id + '_rodamiento')?.value);
+    const tra = num(document.getElementById('n_' + cargo.id + '_transporte')?.value);
+    const fac = num(document.getElementById('n_' + cargo.id + '_factor')?.value || 52.19);
+    const devengado = (sal + ext + rod + tra) * cant;
+    const total = devengado * (1 + fac / 100);
+    const resEl = document.getElementById('res_val_' + cargo.id);
+    const resCard = document.getElementById('res_' + cargo.id);
+    if (resEl) resEl.textContent = fmtCOP(total);
+    if (resCard) resCard.className = 'nom-res-card' + (cant > 0 ? ' activo' : '');
+    grandTotal += total;
+  });
+  const gt = document.getElementById('nomina-grand-total');
+  if (gt) gt.textContent = fmtCOP(grandTotal);
+}
+
+function leerNomina() {
+  const datos = {};
+  CARGOS.forEach(cargo => {
+    datos[cargo.id] = {};
+    CAMPOS_NOMINA.forEach(campo => {
+      const el = document.getElementById('n_' + cargo.id + '_' + campo.id);
+      datos[cargo.id][campo.id] = el ? el.value : 0;
+    });
+  });
+  return datos;
+}
+
+// FORM GENERAL
 function buildForm(id, def, datos) {
   let html = '';
   let enSeccion = false;
-
   def.campos.forEach(c => {
     if (c.seccion) {
       if (enSeccion) html += '</div>';
-      html += `<div class="form-section"><div class="form-section-title">${c.seccion}</div>`;
+      html += '<div class="form-section"><div class="form-section-title">📌 ' + c.seccion + '</div>';
       enSeccion = true;
       return;
     }
     const val = datos[c.id] !== undefined ? datos[c.id] : (c.default !== undefined ? c.default : '');
-
     if (c.tipo === 'select') {
-      html += `<div class="form-row full"><div class="form-group">
-        <label class="form-label">${c.label}</label>
-        <select class="form-input" id="f_${c.id}" onchange="calcularTotal('${id}')">
-          ${c.opciones.map(o => `<option ${val === o ? 'selected' : ''}>${o}</option>`).join('')}
-        </select>
-      </div></div>`;
+      html += '<div class="form-row full"><div class="form-group"><label class="form-label">' + c.label + '</label>' +
+        '<select class="form-input" id="f_' + c.id + '" onchange="calcularTotal('' + id + '')">' +
+        c.opciones.map(o => '<option' + (val===o?' selected':'')+'>'+o+'</option>').join('') +
+        '</select></div></div>';
     } else {
-      html += `<div class="form-row"><div class="form-group">
-        <label class="form-label">${c.label}</label>
-        <input class="form-input numero" type="number" id="f_${c.id}" value="${val}" 
-          oninput="calcularTotal('${id}')" placeholder="0">
-        ${c.hint ? `<span class="form-hint">${c.hint}</span>` : ''}
-      </div></div>`;
+      html += '<div class="form-row"><div class="form-group"><label class="form-label">' + c.label + '</label>' +
+        '<input class="form-input numero" type="number" id="f_' + c.id + '" value="' + val + '" oninput="calcularTotal('' + id + '')" placeholder="0">' +
+        (c.hint ? '<span class="form-hint">' + c.hint + '</span>' : '') +
+        '</div></div>';
     }
   });
-
   if (enSeccion) html += '</div>';
-
-  html += `<div class="form-total">
-    <span class="form-total-label">Total mensual</span>
-    <span class="form-total-val" id="form-total-val">$0</span>
-  </div>`;
-
+  html += '<div class="form-total-box"><span class="form-total-label">Total mensual</span><span class="form-total-val" id="form-total-val">$0</span></div>';
   return html;
 }
 
 function calcularTotal(id) {
   const def = DEFS[id];
   if (!def?.calcular) return;
-  const datos = leerFormulario(id);
+  const datos = {};
+  def.campos.forEach(c => {
+    if (c.seccion) return;
+    const el = document.getElementById('f_' + c.id);
+    if (el) datos[c.id] = el.value;
+  });
   try {
     const ingM = modulos.find(x => x.id === 'ingresos');
-    const ingDatos = ingM?.datos || {};
-    const ingCalc = DEFS.ingresos.calcular ? DEFS.ingresos.calcular(ingDatos) : { total: 0 };
-    const calc = def.calcular(datos, ingCalc.total);
+    const ingTotal = ingM?.completado ? DEFS.ingresos.calcular(ingM.datos || {}).total : 0;
+    const calc = def.calcular(datos, ingTotal);
     const el = document.getElementById('form-total-val');
     if (el) el.textContent = fmtCOP(calc.total);
   } catch(e) {}
 }
 
-function leerFormulario(id) {
-  const def = DEFS[id];
-  const datos = {};
-  def.campos.forEach(c => {
-    if (c.seccion) return;
-    const el = document.getElementById('f_' + c.id);
-    if (!el) return;
-    datos[c.id] = c.tipo === 'select' ? el.value : el.value;
-  });
-  return datos;
-}
-
-// ─── GUARDAR MÓDULO ─────────────────────────────────────────────────────────
+// GUARDAR
 async function guardarModulo() {
   if (!moduloActivo) return;
-  const datos = leerFormulario(moduloActivo);
-  const btn = document.getElementById('btn-guardar');
-  btn.textContent = 'Guardando...';
-  btn.disabled = true;
-
+  const def = DEFS[moduloActivo];
+  let datos;
+  if (def.esNomina) {
+    datos = leerNomina();
+  } else {
+    datos = {};
+    def.campos.forEach(c => {
+      if (c.seccion) return;
+      const el = document.getElementById('f_' + c.id);
+      if (el) datos[c.id] = el.value;
+    });
+  }
+  const btnPri = document.querySelector('.btn-pri');
+  btnPri.textContent = 'Guardando...';
+  btnPri.disabled = true;
   try {
-    const { error } = await supa.from('modulos').update({
-      datos,
-      completado: true,
-      actualizado_en: new Date().toISOString()
-    }).eq('id', moduloActivo);
-
-    if (error) throw error;
-
-    // actualizar local
+    await dbPatch('modulos', 'id', moduloActivo, { datos, completado: true, actualizado_en: new Date().toISOString() });
     const idx = modulos.findIndex(m => m.id === moduloActivo);
     if (idx !== -1) { modulos[idx].datos = datos; modulos[idx].completado = true; }
-
     cerrarModal();
     renderModulos();
     actualizarResumen();
     toast('Módulo guardado correctamente', 'ok');
   } catch(e) {
-    toast('Error guardando. Intenta de nuevo.', 'error');
-    console.error(e);
+    toast('Error guardando: ' + e.message, 'error');
   } finally {
-    btn.textContent = 'Guardar módulo';
-    btn.disabled = false;
+    btnPri.textContent = 'Guardar módulo ✓';
+    btnPri.disabled = false;
   }
 }
 
-// ─── CERRAR MODAL ───────────────────────────────────────────────────────────
 function cerrarModal(e) {
   if (e && e.target !== document.getElementById('overlay')) return;
   document.getElementById('overlay').classList.remove('visible');
   moduloActivo = null;
 }
 
-// ─── CALCULAR RESUMEN ───────────────────────────────────────────────────────
+// RESUMEN P&G
 function actualizarResumen() {
   const ingM = modulos.find(m => m.id === 'ingresos');
   if (!ingM?.completado) { renderPYG(null); return; }
-
-  const ingCalc = DEFS.ingresos.calcular(ingM.datos);
+  const ingCalc = DEFS.ingresos.calcular(ingM.datos || {});
   const totalIngresos = ingCalc.total;
-
   let totalCostos = 0;
   const detalles = {};
 
-  ['nomina','dotacion','comunicaciones','vehiculos','logistica','caninos','capacitacion','polizas'].forEach(id => {
+  const nomM = modulos.find(m => m.id === 'nomina');
+  if (nomM?.completado) {
+    const nomTotal = calcularNominaTotal(nomM.datos || {});
+    detalles['nomina'] = { total: nomTotal };
+    totalCostos += nomTotal;
+  }
+
+  ['dotacion','comunicaciones','vehiculos','logistica','caninos','capacitacion','polizas'].forEach(id => {
     const m = modulos.find(x => x.id === id);
     if (m?.completado && DEFS[id]?.calcular) {
       try {
-        const calc = DEFS[id].calcular(m.datos, totalIngresos);
+        const calc = DEFS[id].calcular(m.datos || {}, totalIngresos);
         detalles[id] = calc;
         totalCostos += calc.total;
       } catch(e) {}
@@ -644,289 +825,213 @@ function actualizarResumen() {
   const admM = modulos.find(m => m.id === 'gastos_admin');
   let gastoAdmin = 0;
   if (admM?.completado) {
-    try { gastoAdmin = DEFS.gastos_admin.calcular(admM.datos, totalIngresos).total; } catch(e) {}
+    try { gastoAdmin = DEFS.gastos_admin.calcular(admM.datos || {}, totalIngresos).total; } catch(e) {}
   }
-
   const utilOp = utilBruta - gastoAdmin;
   const margen = totalIngresos > 0 ? (utilOp / totalIngresos) * 100 : 0;
-
   renderPYG({ totalIngresos, totalCostos, utilBruta, gastoAdmin, utilOp, margen, detalles });
   renderVeredicto(margen, utilOp);
 }
 
-// ─── RENDER P&G ─────────────────────────────────────────────────────────────
 function renderPYG(r) {
   const c = document.getElementById('pyg-container');
-  if (!r) {
-    c.innerHTML = '<div style="padding:20px 0;text-align:center;color:var(--texto2);font-size:13px">Complete los módulos para ver el estado de resultados</div>';
-    return;
-  }
+  if (!r) { c.innerHTML = '<div style="padding:24px 0;text-align:center;color:var(--gris-claro);font-size:13px">Complete los módulos para ver el estado de resultados</div>'; return; }
+  const row = (label, val, cls='') =>
+    '<div class="pyg-row ' + cls + '"><span class="pyg-label">' + label + '</span><span class="pyg-val">' + fmtCOP(val) + '</span></div>';
+  const rowI = (label, val) =>
+    '<div class="pyg-row pyg-indent"><span class="pyg-label">' + label + '</span><span class="pyg-val" style="color:var(--rojo-vivo)">' + fmtCOP(val) + '</span></div>';
 
-  const { totalIngresos: ing, totalCostos, utilBruta, gastoAdmin, utilOp, detalles } = r;
-
-  const row = (label, val, cls='', indent='') =>
-    `<div class="pyg-row ${cls}"><span class="pyg-label ${indent}">${label}</span><span class="pyg-val">${fmtCOP(val)}</span></div>`;
-
-  const nomCalc = detalles['nomina'];
-
-  c.innerHTML = `
-    ${row('Ingresos totales', ing, 'total azul')}
-    <div style="height:8px"></div>
-    ${row('Nómina operativa', -(nomCalc?.total||0), 'rojo')}
-    ${nomCalc ? row('· Vigilantes', -(nomCalc.costoVig||0), 'rojo', 'pyg-indent') : ''}
-    ${nomCalc ? row('· Supervisores', -(nomCalc.costoSup||0), 'rojo', 'pyg-indent') : ''}
-    ${row('Dotación y equipos', -(detalles['dotacion']?.total||0), 'rojo')}
-    ${row('Comunicaciones', -(detalles['comunicaciones']?.total||0), 'rojo')}
-    ${row('Vehículos', -(detalles['vehiculos']?.total||0), 'rojo')}
-    ${row('Logística', -(detalles['logistica']?.total||0), 'rojo')}
-    ${row('Caninos', -(detalles['caninos']?.total||0), 'rojo')}
-    ${row('Capacitación', -(detalles['capacitacion']?.total||0), 'rojo')}
-    ${row('Pólizas', -(detalles['polizas']?.total||0), 'rojo')}
-    <div style="height:4px"></div>
-    ${row('Total costos operativos', -totalCostos, 'subtotal total rojo')}
-    <div style="height:4px"></div>
-    ${row('Utilidad bruta', utilBruta, 'total ' + (utilBruta >= 0 ? 'verde' : 'rojo'))}
-    ${row('Gastos administrativos', -gastoAdmin, 'rojo')}
-    <div style="height:4px"></div>
-    ${row('UTILIDAD OPERACIONAL', utilOp, 'subtotal total ' + (utilOp >= 0 ? 'verde' : 'rojo'))}
-    <div style="padding:10px 0; text-align:right; font-size:12px; color:var(--texto2)">
-      Margen operacional: <strong style="color:${utilOp>=0?'var(--verde)':'var(--rojo)'}">${r.margen.toFixed(2)}%</strong>
-    </div>
-  `;
+  c.innerHTML =
+    row('Ingresos del contrato', r.totalIngresos, 'total azul') +
+    '<div style="height:6px"></div>' +
+    row('Nómina operativa', -(r.detalles.nomina?.total||0), 'rojo-val') +
+    row('Dotación y equipos', -(r.detalles.dotacion?.total||0), 'rojo-val') +
+    row('Comunicaciones', -(r.detalles.comunicaciones?.total||0), 'rojo-val') +
+    row('Vehículos', -(r.detalles.vehiculos?.total||0), 'rojo-val') +
+    row('Logística', -(r.detalles.logistica?.total||0), 'rojo-val') +
+    row('Caninos', -(r.detalles.caninos?.total||0), 'rojo-val') +
+    row('Capacitación', -(r.detalles.capacitacion?.total||0), 'rojo-val') +
+    row('Pólizas', -(r.detalles.polizas?.total||0), 'rojo-val') +
+    '<div style="height:4px"></div>' +
+    row('Total costos operativos', -r.totalCostos, 'total subtotal rojo-val') +
+    '<div style="height:4px"></div>' +
+    row('Utilidad bruta', r.utilBruta, 'total ' + (r.utilBruta>=0?'verde':'rojo-val')) +
+    row('Gastos administrativos', -r.gastoAdmin, 'rojo-val') +
+    '<div style="height:4px"></div>' +
+    row('UTILIDAD OPERACIONAL', r.utilOp, 'total subtotal ' + (r.utilOp>=0?'verde':'rojo-val')) +
+    '<div style="padding:10px 0 0;text-align:right;font-size:12px;color:var(--gris-claro)">Margen operacional: <strong style="color:' + (r.utilOp>=0?'var(--verde)':'var(--rojo)') + '">' + r.margen.toFixed(2) + '%</strong></div>';
 }
 
-// ─── VEREDICTO ──────────────────────────────────────────────────────────────
 function renderVeredicto(margen, utilOp) {
   const card = document.getElementById('veredicto-card');
   const titulo = document.getElementById('verd-titulo');
   const marg = document.getElementById('verd-margen');
   const texto = document.getElementById('verd-texto');
-
   marg.textContent = margen.toFixed(2) + '%';
-
   if (utilOp < 0) {
     card.className = 'veredicto perdida';
-    titulo.textContent = '⚠ No es viable';
-    texto.textContent = `El servicio genera una pérdida de ${fmtCOP(Math.abs(utilOp))}/mes. Se requiere ajuste urgente de tarifa o reducción de costos.`;
+    titulo.textContent = '⛔ No es viable';
+    texto.textContent = 'Pérdida de ' + fmtCOP(Math.abs(utilOp)) + '/mes. Se requiere ajuste urgente de tarifa o reducción de costos.';
   } else if (margen < 3) {
     card.className = 'veredicto fragil';
     titulo.textContent = '⚡ Viable pero frágil';
-    texto.textContent = `El servicio es rentable pero con margen muy ajustado. Cualquier variación en costos puede generar pérdidas.`;
+    texto.textContent = 'Margen muy ajustado. Cualquier variación puede generar pérdidas.';
   } else if (margen < 8) {
     card.className = 'veredicto fragil';
     titulo.textContent = '📈 Viable, margen moderado';
-    texto.textContent = `El servicio es viable con utilidad de ${fmtCOP(utilOp)}/mes. Hay oportunidades de mejora en gastos administrativos.`;
+    texto.textContent = 'Utilidad de ' + fmtCOP(utilOp) + '/mes. Hay oportunidades de mejora.';
   } else {
     card.className = 'veredicto rentable';
     titulo.textContent = '✅ Servicio rentable';
-    texto.textContent = `El servicio es financieramente sano con utilidad de ${fmtCOP(utilOp)}/mes. Margen dentro del rango objetivo.`;
+    texto.textContent = 'Financieramente sano. Utilidad de ' + fmtCOP(utilOp) + '/mes.';
   }
 }
 
-// ─── GENERAR ANÁLISIS ───────────────────────────────────────────────────────
+// GENERAR ANÁLISIS
 async function generarAnalisis() {
   const btn = document.getElementById('btn-generar');
-  btn.textContent = 'Generando...';
-  btn.disabled = true;
-
+  btn.textContent = 'Generando...'; btn.disabled = true;
   try {
-    // Calcular resumen final
     const ingM = modulos.find(m => m.id === 'ingresos');
-    const ingCalc = DEFS.ingresos.calcular(ingM.datos);
+    const ingCalc = DEFS.ingresos.calcular(ingM.datos || {});
     const totalIngresos = ingCalc.total;
-
     let totalCostos = 0;
     const detalles = {};
-    ['nomina','dotacion','comunicaciones','vehiculos','logistica','caninos','capacitacion','polizas'].forEach(id => {
-      const m = modulos.find(x => x.id === id);
-      if (m?.completado) {
-        try {
-          const calc = DEFS[id].calcular(m.datos, totalIngresos);
-          detalles[id] = calc.total;
-          totalCostos += calc.total;
-        } catch(e) {}
-      }
+    const nomM = modulos.find(m => m.id === 'nomina');
+    if (nomM?.completado) { const t = calcularNominaTotal(nomM.datos||{}); detalles.nomina = t; totalCostos += t; }
+    ['dotacion','comunicaciones','vehiculos','logistica','caninos','capacitacion','polizas'].forEach(id => {
+      const m = modulos.find(x=>x.id===id);
+      if (m?.completado && DEFS[id]?.calcular) { try { const c=DEFS[id].calcular(m.datos||{},totalIngresos); detalles[id]=c.total; totalCostos+=c.total; } catch(e){} }
     });
-
     const admM = modulos.find(m => m.id === 'gastos_admin');
-    const gastoAdmin = admM?.completado ? DEFS.gastos_admin.calcular(admM.datos, totalIngresos).total : 0;
+    let gastoAdmin = 0;
+    if (admM?.completado) { try { gastoAdmin = DEFS.gastos_admin.calcular(admM.datos||{}, totalIngresos).total; } catch(e){} }
     const utilBruta = totalIngresos - totalCostos;
     const utilOp = utilBruta - gastoAdmin;
     const margen = (utilOp / totalIngresos) * 100;
     const veredicto = utilOp < 0 ? 'No viable' : margen < 3 ? 'Frágil' : margen < 8 ? 'Moderado' : 'Rentable';
 
-    // Obtener último consecutivo
-    const { data: ultimo } = await supa.from('analisis').select('consecutivo').order('id', { ascending: false }).limit(1);
+    const ultimo = await dbGetOne('analisis', 'select=consecutivo&order=id.desc');
     let numConsec = 1;
-    if (ultimo?.length) {
-      const match = ultimo[0].consecutivo.match(/\d+/);
-      if (match) numConsec = parseInt(match[0]) + 1;
+    if (Array.isArray(ultimo) && ultimo.length > 0) {
+      const m = ultimo[0].consecutivo?.match(/\d+/);
+      if (m) numConsec = parseInt(m[0]) + 1;
     }
-    const consecutivo = 'ANL-' + String(numConsec).padStart(3, '0');
+    const consecutivo = 'ANL-' + String(numConsec).padStart(3,'0');
+    await dbPost('analisis', { consecutivo, resumen:{ totalIngresos, totalCostos, gastoAdmin, utilBruta, utilOp, margen, detalles }, veredicto, margen: Math.round(margen*100)/100 });
 
-    const { error } = await supa.from('analisis').insert({
-      consecutivo,
-      resumen: { totalIngresos, totalCostos, gastoAdmin, utilBruta, utilOp, margen, detalles },
-      veredicto,
-      margen: Math.round(margen * 100) / 100
-    });
-
-    if (error) throw error;
-
-    consecutivoActual = { consecutivo, fecha: new Date(), totalIngresos, totalCostos, gastoAdmin, utilBruta, utilOp, margen, veredicto };
-
+    consecutivoActual = { consecutivo, totalIngresos, totalCostos, gastoAdmin, utilBruta, utilOp, margen, veredicto };
     document.getElementById('consec-num').textContent = consecutivo;
-    document.getElementById('consec-fecha').textContent = new Date().toLocaleDateString('es-CO', { day:'2-digit', month:'long', year:'numeric' });
-    document.getElementById('consec-badge').classList.add('visible');
+    document.getElementById('consec-fecha').textContent = new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
+    document.getElementById('consec-badge').className = 'consec-badge visible';
     document.getElementById('btn-pdf').disabled = false;
-
-    toast(`Análisis ${consecutivo} generado exitosamente`, 'ok');
+    toast('Análisis ' + consecutivo + ' generado', 'ok');
   } catch(e) {
     toast('Error generando análisis', 'error');
-    console.error(e);
   } finally {
-    btn.textContent = '✦ Generar análisis';
-    btn.disabled = false;
+    btn.textContent = '✦ Generar análisis'; btn.disabled = false;
   }
 }
 
-// ─── EXPORTAR PDF ───────────────────────────────────────────────────────────
+// PDF
 function exportarPDF() {
   if (!consecutivoActual) return;
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ format: 'letter', unit: 'mm' });
+  const doc = new jsPDF({ format:'letter', unit:'mm' });
   const c = consecutivoActual;
-  const fecha = new Date().toLocaleDateString('es-CO', { day:'2-digit', month:'long', year:'numeric' });
-  const margenPct = c.margen.toFixed(2);
+  const fecha = new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
 
-  // Colores
-  const azulOscuro = [30, 58, 95];
-  const verde = [22, 163, 74];
-  const rojo = [220, 38, 38];
-  const gris = [107, 114, 128];
-  const grisBg = [249, 250, 251];
-  const borde = [229, 231, 235];
+  // Header oscuro
+  doc.setFillColor(28,28,28);
+  doc.rect(0,0,216,42,'F');
+  doc.setFillColor(139,0,0);
+  doc.rect(0,39,216,3,'F');
 
-  // Header
-  doc.setFillColor(...azulOscuro);
-  doc.rect(0, 0, 216, 40, 'F');
+  // Logo texto
   doc.setTextColor(255,255,255);
-  doc.setFontSize(18); doc.setFont(undefined,'bold');
-  doc.text('Análisis de Rentabilidad', 20, 16);
+  doc.setFontSize(20); doc.setFont(undefined,'bold');
+  doc.text('DELTHAC1 SEGURIDAD', 20, 16);
   doc.setFontSize(10); doc.setFont(undefined,'normal');
-  doc.text('Servicios de Vigilancia — Ruitoque UIC', 20, 24);
+  doc.setTextColor(192,200,208);
+  doc.text('Análisis de Rentabilidad · Ruitoque UIC', 20, 25);
   doc.setFontSize(9);
-  doc.text(`${c.consecutivo}  ·  ${fecha}`, 20, 32);
+  doc.text(c.consecutivo + '  ·  ' + fecha, 20, 33);
 
-  // Veredicto badge
-  const colorVerd = c.utilOp < 0 ? rojo : c.margen < 8 ? [217,119,6] : verde;
-  doc.setFillColor(...colorVerd);
-  doc.roundedRect(130, 8, 70, 24, 4, 4, 'F');
+  // Badge veredicto
+  const cv = c.utilOp < 0 ? [192,57,43] : c.margen < 8 ? [180,83,9] : [22,163,74];
+  doc.setFillColor(...cv);
+  doc.roundedRect(140,8,66,24,3,3,'F');
   doc.setTextColor(255,255,255);
-  doc.setFontSize(10); doc.setFont(undefined,'bold');
-  doc.text(c.veredicto, 165, 18, { align:'center' });
+  doc.setFontSize(11); doc.setFont(undefined,'bold');
+  doc.text(c.veredicto, 173, 18, {align:'center'});
   doc.setFontSize(14);
-  doc.text(margenPct + '% margen', 165, 27, { align:'center' });
+  doc.text(c.margen.toFixed(2) + '%', 173, 28, {align:'center'});
 
   let y = 52;
-
-  // Función tabla P&G
-  const filaTabla = (label, valor, negrita=false, fondo=false, colorVal=null) => {
-    if (fondo) { doc.setFillColor(...grisBg); doc.rect(14, y-5, 188, 9, 'F'); }
-    doc.setTextColor(...(negrita ? azulOscuro : [55,65,81]));
-    doc.setFont(undefined, negrita ? 'bold' : 'normal');
-    doc.setFontSize(negrita ? 10 : 9.5);
+  const row = (label, valor, bold=false, bg=false, cv=null) => {
+    if (bg) { doc.setFillColor(238,240,243); doc.rect(14,y-5,188,8,'F'); }
+    doc.setFont(undefined, bold?'bold':'normal');
+    doc.setFontSize(bold?10:9.5);
+    doc.setTextColor(bold?28:85, bold?28:85, bold?28:85);
     doc.text(label, 20, y);
-    doc.setTextColor(...(colorVal || (negrita ? azulOscuro : [55,65,81])));
-    doc.text(fmtCOP(valor), 196, y, { align:'right' });
-    doc.setDrawColor(...borde);
-    doc.line(14, y+2, 202, y+2);
-    y += 9;
+    doc.setTextColor(...(cv || (bold?[28,28,28]:[85,85,85])));
+    doc.text(fmtCOP(valor), 196, y, {align:'right'});
+    doc.setDrawColor(230,230,230);
+    doc.line(14,y+2,202,y+2);
+    y += 8.5;
   };
 
-  const filaIndent = (label, valor) => {
-    doc.setTextColor(...gris);
-    doc.setFont(undefined,'normal');
-    doc.setFontSize(8.5);
-    doc.text('    · ' + label, 20, y);
-    doc.text(fmtCOP(valor), 196, y, { align:'right' });
-    doc.setDrawColor(...borde);
-    doc.line(14, y+2, 202, y+2);
-    y += 7.5;
-  };
+  doc.setFontSize(12); doc.setFont(undefined,'bold'); doc.setTextColor(28,28,28);
+  doc.text('Estado de Resultados', 20, y); y += 9;
 
-  // Título sección
-  doc.setFontSize(12); doc.setFont(undefined,'bold'); doc.setTextColor(...azulOscuro);
-  doc.text('Estado de Resultados', 20, y);
+  row('Ingresos del contrato', c.totalIngresos, true, false, [29,78,216]);
+  y += 2;
+  const getNom = id => { try { const m=modulos.find(x=>x.id===id); if(!m?.completado) return 0; if(id==='nomina') return calcularNominaTotal(m.datos||{}); return DEFS[id].calcular(m.datos||{},c.totalIngresos).total; } catch(e){ return 0; } };
+  row('Nómina operativa', -getNom('nomina'), false, false, [192,57,43]);
+  row('Dotación y equipos', -getNom('dotacion'), false, false, [192,57,43]);
+  row('Comunicaciones', -getNom('comunicaciones'), false, false, [192,57,43]);
+  row('Vehículos', -getNom('vehiculos'), false, false, [192,57,43]);
+  row('Logística', -getNom('logistica'), false, false, [192,57,43]);
+  row('Caninos / binomios', -getNom('caninos'), false, false, [192,57,43]);
+  row('Capacitación', -getNom('capacitacion'), false, false, [192,57,43]);
+  row('Pólizas', -getNom('polizas'), false, false, [192,57,43]);
+  y += 2;
+  row('Total costos operativos', -c.totalCostos, true, true, [192,57,43]);
+  y += 2;
+  row('Utilidad bruta', c.utilBruta, true, false, c.utilBruta>=0?[22,163,74]:[192,57,43]);
+  row('Gastos administrativos', -c.gastoAdmin, false, false, [192,57,43]);
+  y += 2;
+  row('UTILIDAD OPERACIONAL', c.utilOp, true, true, c.utilOp>=0?[22,163,74]:[192,57,43]);
+
+  // KPIs
   y += 10;
-
-  const nomM = modulos.find(m => m.id === 'nomina');
-  let costoVig = 0, costoSup = 0;
-  if (nomM?.completado) {
-    try {
-      const nc = DEFS.nomina.calcular(nomM.datos, c.totalIngresos);
-      costoVig = nc.costoVig || 0; costoSup = nc.costoSup || 0;
-    } catch(e) {}
-  }
-
-  filaTabla('Ingresos del contrato', c.totalIngresos, true, false, [...azulOscuro]);
-
-  y += 3;
-  doc.setFontSize(9); doc.setFont(undefined,'bold'); doc.setTextColor(...gris);
-  doc.text('COSTOS OPERATIVOS', 20, y); y += 7;
-
-  const getNom = id => { try { return DEFS[id].calcular(modulos.find(m=>m.id===id)?.datos||{}, c.totalIngresos).total; } catch(e) { return 0; } };
-
-  filaTabla('Nómina operativa', -getNom('nomina'), false, false, [...rojo]);
-  filaIndent('Vigilantes', -costoVig);
-  filaIndent('Supervisores', -costoSup);
-  filaTabla('Dotación y equipos', -getNom('dotacion'), false, false, [...rojo]);
-  filaTabla('Comunicaciones', -getNom('comunicaciones'), false, false, [...rojo]);
-  filaTabla('Vehículos', -getNom('vehiculos'), false, false, [...rojo]);
-  filaTabla('Logística', -getNom('logistica'), false, false, [...rojo]);
-  filaTabla('Caninos / binomios', -getNom('caninos'), false, false, [...rojo]);
-  filaTabla('Capacitación', -getNom('capacitacion'), false, false, [...rojo]);
-  filaTabla('Pólizas', -getNom('polizas'), false, false, [...rojo]);
-
-  y += 2;
-  filaTabla('Total costos operativos', -c.totalCostos, true, true, [...rojo]);
-  y += 2;
-  filaTabla('Utilidad bruta', c.utilBruta, true, false, c.utilBruta>=0 ? [...verde] : [...rojo]);
-  filaTabla('Gastos administrativos', -c.gastoAdmin, false, false, [...rojo]);
-  y += 2;
-  filaTabla('UTILIDAD OPERACIONAL', c.utilOp, true, true, c.utilOp>=0 ? [...verde] : [...rojo]);
-
-  // KPIs resumen
-  y += 12;
-  doc.setFillColor(...azulOscuro);
-  doc.roundedRect(14, y, 188, 28, 4, 4, 'F');
-  doc.setTextColor(255,255,255);
-
+  doc.setFillColor(28,28,28);
+  doc.roundedRect(14,y,188,26,3,3,'F');
+  doc.setFillColor(139,0,0);
+  doc.rect(14,y+23,188,3,'F');
   const kpis = [
-    ['Margen operacional', margenPct + '%'],
+    ['Margen operacional', c.margen.toFixed(2)+'%'],
     ['Utilidad mensual', fmtCOP(c.utilOp)],
-    ['Utilidad anual proyectada', fmtCOP(c.utilOp * 12)],
-    ['Costos / Ingresos', ((c.totalCostos/c.totalIngresos)*100).toFixed(1) + '%'],
+    ['Proyección anual', fmtCOP(c.utilOp*12)],
+    ['Costos / Ingresos', ((c.totalCostos/c.totalIngresos)*100).toFixed(1)+'%'],
   ];
-  kpis.forEach((k, i) => {
-    const x = 20 + i * 47;
-    doc.setFontSize(7.5); doc.setFont(undefined,'normal'); doc.setTextColor(200,210,225);
-    doc.text(k[0], x, y + 9);
+  kpis.forEach((k,i) => {
+    const x = 20 + i*47;
+    doc.setFontSize(7); doc.setFont(undefined,'normal'); doc.setTextColor(150,160,170);
+    doc.text(k[0], x, y+9);
     doc.setFontSize(10); doc.setFont(undefined,'bold'); doc.setTextColor(255,255,255);
-    doc.text(k[1], x, y + 19);
+    doc.text(k[1], x, y+19);
   });
 
-  // Footer
-  y = 270;
-  doc.setFontSize(8); doc.setFont(undefined,'normal'); doc.setTextColor(...gris);
-  doc.text(`Generado: ${fecha}  ·  ${c.consecutivo}  ·  Sistema de Análisis de Rentabilidad`, 108, y, { align:'center' });
+  doc.setFontSize(8); doc.setFont(undefined,'normal'); doc.setTextColor(150,150,150);
+  doc.text('Delthac1 Seguridad · ' + c.consecutivo + ' · ' + fecha, 108, 270, {align:'center'});
 
-  doc.save(`Analisis_Rentabilidad_${c.consecutivo}.pdf`);
-  toast('PDF generado correctamente', 'ok');
+  doc.save('Rentabilidad_' + c.consecutivo + '.pdf');
+  toast('PDF generado', 'ok');
 }
 
-// ─── INICIO ─────────────────────────────────────────────────────────────────
 init();
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </body>
 </html>
