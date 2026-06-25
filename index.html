@@ -341,20 +341,37 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 const H = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
 const API = (path) => SUPA_URL + '/rest/v1/' + path;
 
+async function fetchConTimeout(url, opts={}, ms=8000) {
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const r = await fetch(url, { ...opts, signal: ctrl.signal });
+    clearTimeout(tid);
+    return r;
+  } catch(e) {
+    clearTimeout(tid);
+    if (e.name === 'AbortError') throw new Error('Timeout: Supabase no responde. Verifica tu conexión.');
+    throw e;
+  }
+}
 async function dbGet(tabla, query='') {
-  const r = await fetch(API(tabla + '?select=*' + (query ? '&' + query : '')), { headers: H });
+  const r = await fetchConTimeout(API(tabla + '?select=*' + (query ? '&' + query : '')), { headers: H });
+  if (!r.ok) { const err = await r.json(); throw new Error(err.message || err.hint || 'Error ' + r.status); }
   return r.json();
 }
 async function dbPatch(tabla, col, val, body) {
-  const r = await fetch(API(tabla + '?' + col + '=eq.' + encodeURIComponent(val)), { method:'PATCH', headers: H, body: JSON.stringify(body) });
+  const r = await fetchConTimeout(API(tabla + '?' + col + '=eq.' + encodeURIComponent(val)), { method:'PATCH', headers: H, body: JSON.stringify(body) });
+  if (!r.ok) { const err = await r.json(); throw new Error(err.message || 'Error guardando'); }
   return r.json();
 }
 async function dbPost(tabla, body) {
-  const r = await fetch(API(tabla), { method:'POST', headers: H, body: JSON.stringify(body) });
+  const r = await fetchConTimeout(API(tabla), { method:'POST', headers: H, body: JSON.stringify(body) });
+  if (!r.ok) { const err = await r.json(); throw new Error(err.message || 'Error insertando'); }
   return r.json();
 }
 async function dbGetOne(tabla, query) {
-  const r = await fetch(API(tabla + '?' + query + '&limit=1'), { headers: H });
+  const r = await fetchConTimeout(API(tabla + '?' + query + '&limit=1'), { headers: H });
+  if (!r.ok) return [];
   return r.json();
 }
 
@@ -528,9 +545,11 @@ function toast(msg, tipo='info') {
 
 // INIT
 async function init() {
+  document.getElementById('sync-label').textContent = 'Conectando...';
   try {
     const data = await dbGet('modulos');
-    if (!Array.isArray(data)) throw new Error(JSON.stringify(data));
+    if (!Array.isArray(data)) throw new Error('Respuesta inesperada: ' + JSON.stringify(data).substring(0,100));
+    if (data.length === 0) throw new Error('Tabla vacía. Ejecuta el SQL de setup en Supabase → SQL Editor.');
     modulos = data;
     document.getElementById('sync-dot').className = 'sync-dot ok';
     document.getElementById('sync-label').textContent = 'Conectado';
@@ -538,10 +557,13 @@ async function init() {
     actualizarResumen();
   } catch(e) {
     document.getElementById('sync-dot').className = 'sync-dot error';
-    document.getElementById('sync-label').textContent = 'Sin conexión';
-    toast('Error: ' + e.message, 'error');
+    document.getElementById('sync-label').textContent = 'Error · Reintentar';
     document.getElementById('grid-modulos').innerHTML =
-      '<div style="grid-column:1/-1;padding:20px;background:var(--rojo-claro);border-radius:10px;border:1.5px solid var(--rojo-borde);color:var(--rojo);font-size:13px"><strong>Error de conexión:</strong><br>' + e.message + '</div>';
+      '<div style="grid-column:1/-1;padding:20px;background:var(--rojo-claro);border-radius:10px;border:1.5px solid var(--rojo-borde);color:var(--rojo);font-size:13px">' +
+      '<strong>Error de conexión:</strong> ' + e.message +
+      '<br><br><button onclick="init()" style="padding:8px 16px;background:var(--rojo);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:700">🔄 Reintentar</button>' +
+      '</div>';
+    toast('Error: ' + e.message, 'error');
   }
 }
 
