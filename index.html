@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Análisis de Rentabilidad — Vigilancia</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --verde: #16a34a; --verde-bg: #f0fdf4; --verde-borde: #bbf7d0;
+    --gris: #6b7280; --gris-bg: #f9fafb; --gris-borde: #e5e7eb;
+    --rojo: #dc2626; --rojo-bg: #fef2f2; --rojo-borde: #fecaca;
+    --amarillo: #d97706; --amarillo-bg: #fffbeb; --amarillo-borde: #fde68a;
+    --azul: #2563eb; --azul-bg: #eff6ff; --azul-borde: #bfdbfe;
+    --texto: #111827; --texto2: #6b7280; --borde: #e5e7eb;
+    --radio: 10px; --sombra: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f3f4f6; color: var(--texto); min-height: 100vh; }
+
+  /* HEADER */
+  .header { background: #1e3a5f; color: white; padding: 20px 32px; display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { font-size: 20px; font-weight: 600; }
+  .header p { font-size: 13px; opacity: .7; margin-top: 2px; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; }
+  .sync-dot.error { background: #f87171; }
+  .sync-label { font-size: 12px; opacity: .8; }
+
+  /* MAIN */
+  .main { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+  /* PROGRESO */
+  .progreso-bar { background: white; border-radius: var(--radio); padding: 20px 24px; margin-bottom: 28px; box-shadow: var(--sombra); display: flex; align-items: center; gap: 20px; }
+  .progreso-texto { flex: 1; }
+  .progreso-texto h2 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .progreso-track { height: 8px; background: var(--gris-borde); border-radius: 4px; overflow: hidden; flex: 1; }
+  .progreso-fill { height: 100%; background: var(--verde); border-radius: 4px; transition: width .4s; }
+  .progreso-pct { font-size: 14px; font-weight: 600; color: var(--verde); min-width: 36px; text-align: right; }
+
+  /* GRID MÓDULOS */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-bottom: 28px; }
+
+  /* TARJETA MÓDULO */
+  .modulo { background: white; border-radius: var(--radio); border: 2px solid var(--gris-borde); box-shadow: var(--sombra); cursor: pointer; transition: all .2s; overflow: hidden; }
+  .modulo:hover { border-color: #93c5fd; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+  .modulo.completo { border-color: var(--verde-borde); background: var(--verde-bg); }
+  .modulo-header { padding: 18px 20px; display: flex; align-items: center; gap: 14px; }
+  .modulo-icono { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; background: var(--gris-bg); }
+  .modulo.completo .modulo-icono { background: var(--verde-bg); }
+  .modulo-info { flex: 1; }
+  .modulo-nombre { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+  .modulo-estado { font-size: 12px; color: var(--texto2); }
+  .modulo.completo .modulo-estado { color: var(--verde); }
+  .modulo-check { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--gris-borde); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .modulo.completo .modulo-check { background: var(--verde); border-color: var(--verde); color: white; font-size: 14px; }
+  .modulo-resumen { padding: 0 20px 14px; font-size: 12px; color: var(--texto2); border-top: 1px solid var(--gris-borde); padding-top: 10px; }
+  .modulo.completo .modulo-resumen { border-top-color: var(--verde-borde); }
+
+  /* PANEL INFERIOR */
+  .panel-bottom { display: grid; grid-template-columns: 1fr 340px; gap: 20px; }
+
+  /* RESUMEN */
+  .resumen { background: white; border-radius: var(--radio); box-shadow: var(--sombra); overflow: hidden; }
+  .resumen-header { background: #1e3a5f; color: white; padding: 16px 20px; font-size: 15px; font-weight: 600; }
+  .pyg { padding: 16px 20px; }
+  .pyg-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--gris-borde); font-size: 13px; }
+  .pyg-row:last-child { border-bottom: none; }
+  .pyg-row.total { font-weight: 700; font-size: 14px; }
+  .pyg-row.subtotal { background: var(--gris-bg); margin: 0 -20px; padding: 8px 20px; }
+  .pyg-row.verde .pyg-val { color: var(--verde); }
+  .pyg-row.rojo .pyg-val { color: var(--rojo); }
+  .pyg-row.azul .pyg-val { color: var(--azul); }
+  .pyg-label { color: var(--texto2); }
+  .pyg-row.total .pyg-label { color: var(--texto); }
+  .pyg-val { font-variant-numeric: tabular-nums; font-weight: 500; }
+  .pyg-indent { padding-left: 16px; }
+  .pyg-indent .pyg-label { font-size: 12px; }
+
+  /* PANEL DERECHO */
+  .panel-der { display: flex; flex-direction: column; gap: 16px; }
+
+  /* VEREDICTO */
+  .veredicto { border-radius: var(--radio); padding: 20px; box-shadow: var(--sombra); }
+  .veredicto.rentable { background: var(--verde-bg); border: 2px solid var(--verde-borde); }
+  .veredicto.fragil { background: var(--amarillo-bg); border: 2px solid var(--amarillo-borde); }
+  .veredicto.perdida { background: var(--rojo-bg); border: 2px solid var(--rojo-borde); }
+  .veredicto.pendiente { background: var(--gris-bg); border: 2px solid var(--gris-borde); }
+  .verd-titulo { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+  .verd-margen { font-size: 32px; font-weight: 800; margin: 8px 0; }
+  .verd-texto { font-size: 13px; line-height: 1.5; }
+  .veredicto.rentable .verd-titulo, .veredicto.rentable .verd-margen { color: var(--verde); }
+  .veredicto.fragil .verd-titulo, .veredicto.fragil .verd-margen { color: var(--amarillo); }
+  .veredicto.perdida .verd-titulo, .veredicto.perdida .verd-margen { color: var(--rojo); }
+  .veredicto.pendiente .verd-titulo { color: var(--gris); }
+
+  /* BOTONES */
+  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 14px; border-radius: var(--radio); border: none; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s; }
+  .btn-generar { background: #1e3a5f; color: white; }
+  .btn-generar:hover { background: #1e40af; }
+  .btn-generar:disabled { background: var(--gris-borde); color: var(--texto2); cursor: not-allowed; }
+  .btn-pdf { background: var(--rojo); color: white; }
+  .btn-pdf:hover { background: #b91c1c; }
+  .btn-pdf:disabled { background: var(--gris-borde); color: var(--texto2); cursor: not-allowed; }
+
+  /* CONSECUTIVO */
+  .consecutivo-badge { background: var(--azul-bg); border: 1px solid var(--azul-borde); border-radius: 8px; padding: 12px 16px; text-align: center; display: none; }
+  .consecutivo-badge.visible { display: block; }
+  .consec-label { font-size: 11px; color: var(--azul); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+  .consec-num { font-size: 24px; font-weight: 800; color: var(--azul); }
+
+  /* MODAL */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; display: none; }
+  .overlay.visible { display: flex; }
+  .modal { background: white; border-radius: 14px; width: 100%; max-width: 620px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+  .modal-header { padding: 20px 24px; border-bottom: 1px solid var(--borde); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: white; z-index: 1; }
+  .modal-titulo { font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+  .modal-icono { font-size: 24px; }
+  .modal-cerrar { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--borde); background: none; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; color: var(--texto2); }
+  .modal-cerrar:hover { background: var(--gris-bg); }
+  .modal-body { padding: 24px; }
+  .modal-footer { padding: 16px 24px; border-top: 1px solid var(--borde); display: flex; gap: 12px; justify-content: flex-end; sticky: bottom; background: white; }
+  .btn-sec { padding: 10px 20px; border-radius: 8px; border: 1px solid var(--borde); background: white; cursor: pointer; font-size: 14px; font-weight: 500; }
+  .btn-sec:hover { background: var(--gris-bg); }
+  .btn-pri { padding: 10px 20px; border-radius: 8px; border: none; background: var(--verde); color: white; cursor: pointer; font-size: 14px; font-weight: 600; }
+  .btn-pri:hover { background: #15803d; }
+
+  /* FORMULARIO */
+  .form-section { margin-bottom: 20px; }
+  .form-section-title { font-size: 12px; font-weight: 600; color: var(--texto2); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--borde); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+  .form-row.full { grid-template-columns: 1fr; }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-label { font-size: 12px; font-weight: 500; color: var(--texto2); }
+  .form-input { padding: 9px 12px; border: 1px solid var(--borde); border-radius: 8px; font-size: 14px; color: var(--texto); transition: border .2s; }
+  .form-input:focus { outline: none; border-color: var(--azul); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+  .form-input.numero { text-align: right; }
+  .form-hint { font-size: 11px; color: var(--texto2); margin-top: 2px; }
+  .form-total { background: var(--azul-bg); border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
+  .form-total-label { font-size: 13px; font-weight: 600; color: var(--azul); }
+  .form-total-val { font-size: 18px; font-weight: 800; color: var(--azul); }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 24px; right: 24px; background: #1e3a5f; color: white; padding: 12px 20px; border-radius: 10px; font-size: 14px; font-weight: 500; z-index: 999; opacity: 0; transform: translateY(10px); transition: all .3s; pointer-events: none; }
+  .toast.visible { opacity: 1; transform: translateY(0); }
+  .toast.error { background: var(--rojo); }
+  .toast.ok { background: var(--verde); }
+
+  /* LOADING */
+  .loading { display: flex; align-items: center; justify-content: center; padding: 40px; gap: 12px; color: var(--texto2); font-size: 14px; }
+  .spinner { width: 20px; height: 20px; border: 2px solid var(--borde); border-top-color: var(--azul); border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div>
+    <h1>Análisis de Rentabilidad — Vigilancia</h1>
+    <p>Ruitoque UIC · Diligencie cada módulo para generar el análisis</p>
+  </div>
+  <div class="header-right">
+    <div class="sync-dot" id="sync-dot"></div>
+    <span class="sync-label" id="sync-label">Conectando...</span>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- BARRA DE PROGRESO -->
+  <div class="progreso-bar">
+    <div class="progreso-texto">
+      <h2 id="progreso-titulo">Cargando módulos...</h2>
+    </div>
+    <div class="progreso-track" style="flex:1">
+      <div class="progreso-fill" id="progreso-fill" style="width:0%"></div>
+    </div>
+    <div class="progreso-pct" id="progreso-pct">0%</div>
+  </div>
+
+  <!-- GRID DE MÓDULOS -->
+  <div class="grid" id="grid-modulos">
+    <div class="loading"><div class="spinner"></div> Cargando módulos...</div>
+  </div>
+
+  <!-- PANEL INFERIOR -->
+  <div class="panel-bottom">
+
+    <!-- P&G -->
+    <div class="resumen">
+      <div class="resumen-header">Estado de Resultados</div>
+      <div class="pyg" id="pyg-container">
+        <div style="padding:20px 0; text-align:center; color:var(--texto2); font-size:13px">
+          Complete los módulos para ver el estado de resultados
+        </div>
+      </div>
+    </div>
+
+    <!-- PANEL DERECHO -->
+    <div class="panel-der">
+
+      <!-- VEREDICTO -->
+      <div class="veredicto pendiente" id="veredicto-card">
+        <div class="verd-titulo" id="verd-titulo">Pendiente</div>
+        <div class="verd-margen" id="verd-margen">--%</div>
+        <div class="verd-texto" id="verd-texto">Complete todos los módulos para ver el análisis de viabilidad.</div>
+      </div>
+
+      <!-- CONSECUTIVO -->
+      <div class="consecutivo-badge" id="consec-badge">
+        <div class="consec-label">Análisis generado</div>
+        <div class="consec-num" id="consec-num">ANL-000</div>
+        <div style="font-size:12px;color:var(--azul);margin-top:4px" id="consec-fecha"></div>
+      </div>
+
+      <!-- BOTONES -->
+      <button class="btn btn-generar" id="btn-generar" disabled onclick="generarAnalisis()">
+        ✦ Generar análisis
+      </button>
+      <button class="btn btn-pdf" id="btn-pdf" disabled onclick="exportarPDF()">
+        ↓ Exportar PDF
+      </button>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay" onclick="cerrarModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div class="modal-titulo">
+        <span class="modal-icono" id="modal-icono"></span>
+        <span id="modal-titulo-texto"></span>
+      </div>
+      <button class="modal-cerrar" onclick="cerrarModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn-sec" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn-pri" id="btn-guardar" onclick="guardarModulo()">Guardar módulo</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── SUPABASE CONFIG ───────────────────────────────────────────────────────
+const SUPA_URL = 'https://dkuezhphirkirnmdwdo.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRrY3VlemhwaGlya2lybm1kd2RvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MDkzNDksImV4cCI6MjA5Nzk4NTM0OX0.LPH9UJI5-ASAt6bHpJoiUTWcuOSWCNlxHn3-rycXIYE';
+const supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+// ─── ESTADO GLOBAL ─────────────────────────────────────────────────────────
+let modulos = [];
+let moduloActivo = null;
+let consecutivoActual = null;
+
+// ─── DEFINICIÓN DE MÓDULOS ──────────────────────────────────────────────────
+const DEFS = {
+  ingresos: {
+    icono: '💰', nombre: 'Ingresos del contrato',
+    campos: [
+      { id:'valor_contrato', label:'Valor mensual del contrato', tipo:'numero', hint:'Valor total facturado al cliente' },
+      { id:'aiu_pct', label:'AIU (%)', tipo:'numero', hint:'Administración, Imprevistos y Utilidad', default:10 },
+      { id:'incluye_electronico', label:'¿Incluye servicios electrónicos?', tipo:'select', opciones:['No','Sí'] },
+      { id:'valor_electronico', label:'Valor servicios electrónicos', tipo:'numero', hint:'Si aplica', default:0 },
+    ],
+    calcular(d) {
+      const base = num(d.valor_contrato);
+      const elec = d.incluye_electronico === 'Sí' ? num(d.valor_electronico) : 0;
+      return { total: base + elec, detalle: `Contrato $${fmt(base)}${elec ? ` + Electrónico $${fmt(elec)}` : ''}` };
+    }
+  },
+  nomina: {
+    icono: '👷', nombre: 'Nómina operativa',
+    campos: [
+      { seccion: 'Vigilantes' },
+      { id:'vig_cantidad', label:'Cantidad de vigilantes', tipo:'numero', default:20 },
+      { id:'vig_salario', label:'Salario base c/u', tipo:'numero', default:1423500 },
+      { id:'vig_extras', label:'Horas extras c/u', tipo:'numero', default:1000000 },
+      { id:'vig_rodamiento', label:'Rodamiento c/u', tipo:'numero', default:0 },
+      { id:'vig_transporte', label:'Aux. transporte c/u', tipo:'numero', default:200000 },
+      { id:'vig_factor', label:'Factor prestacional (%)', tipo:'numero', default:52.19, hint:'Cesantías, prima, vacaciones, SS' },
+      { seccion: 'Supervisores' },
+      { id:'sup_cantidad', label:'Cantidad de supervisores', tipo:'numero', default:3 },
+      { id:'sup_salario', label:'Salario base c/u', tipo:'numero', default:1423500 },
+      { id:'sup_extras', label:'Horas extras c/u', tipo:'numero', default:1500000 },
+      { id:'sup_rodamiento', label:'Rodamiento c/u', tipo:'numero', default:550000 },
+      { id:'sup_factor', label:'Factor prestacional (%)', tipo:'numero', default:52.19 },
+    ],
+    calcular(d) {
+      const nVig = num(d.vig_cantidad);
+      const devVig = (num(d.vig_salario) + num(d.vig_extras) + num(d.vig_rodamiento) + num(d.vig_transporte)) * nVig;
+      const costoVig = devVig * (1 + num(d.vig_factor) / 100);
+      const nSup = num(d.sup_cantidad);
+      const devSup = (num(d.sup_salario) + num(d.sup_extras) + num(d.sup_rodamiento)) * nSup;
+      const costoSup = devSup * (1 + num(d.sup_factor) / 100);
+      return { total: costoVig + costoSup, detalle: `${nVig} vigilantes + ${nSup} supervisores`, costoVig, costoSup };
+    }
+  },
+  dotacion: {
+    icono: '👔', nombre: 'Dotación y equipos',
+    campos: [
+      { id:'uniformes', label:'Uniformes y calzado', tipo:'numero', default:0 },
+      { id:'chalecos', label:'Chalecos antibalas y multiproposito', tipo:'numero', default:0 },
+      { id:'bodycam', label:'Cámaras bodycam', tipo:'numero', default:0 },
+      { id:'linternas', label:'Linternas tácticas', tipo:'numero', default:0 },
+      { id:'bastones', label:'Bastones / tonfas', tipo:'numero', default:0 },
+      { id:'botiquin', label:'Botiquín y EPP', tipo:'numero', default:0 },
+      { id:'otros_dot', label:'Otros equipos', tipo:'numero', default:0 },
+    ],
+    calcular(d) {
+      const total = ['uniformes','chalecos','bodycam','linternas','bastones','botiquin','otros_dot'].reduce((s,k) => s + num(d[k]), 0);
+      return { total, detalle: `$${fmt(total)}/mes` };
+    }
+  },
+  comunicaciones: {
+    icono: '📡', nombre: 'Comunicaciones',
+    campos: [
+      { id:'radios_cantidad', label:'Cantidad de radios POC', tipo:'numero', default:32 },
+      { id:'radios_valor', label:'Amortización radios (mensual)', tipo:'numero', default:530480 },
+      { id:'plan_datos', label:'Plan de datos total', tipo:'numero', default:700800 },
+      { id:'celulares', label:'Celulares y smartphones', tipo:'numero', default:0 },
+      { id:'otros_com', label:'Otros (mantenimiento, accesorios)', tipo:'numero', default:0 },
+    ],
+    calcular(d) {
+      const total = ['radios_valor','plan_datos','celulares','otros_com'].reduce((s,k) => s + num(d[k]), 0);
+      return { total, detalle: `${num(d.radios_cantidad)} radios · $${fmt(total)}/mes` };
+    }
+  },
+  vehiculos: {
+    icono: '🚗', nombre: 'Vehículos',
+    campos: [
+      { seccion: 'Vehículo propio' },
+      { id:'vp_seguro', label:'Seguro todo riesgo (mensual)', tipo:'numero', default:362456 },
+      { id:'vp_soat', label:'SOAT (mensual)', tipo:'numero', default:78592 },
+      { id:'vp_impuesto', label:'Impuesto vehicular (mensual)', tipo:'numero', default:580388 },
+      { id:'vp_depreciacion', label:'Depreciación mensual', tipo:'numero', default:1658250 },
+      { id:'vp_tramites', label:'Trámites y otros', tipo:'numero', default:0 },
+      { seccion: 'Vehículo arrendado' },
+      { id:'va_canon', label:'Canon de arrendamiento', tipo:'numero', default:3270000 },
+      { id:'va_soat', label:'SOAT (mensual)', tipo:'numero', default:49483 },
+      { id:'va_combustible', label:'Combustible', tipo:'numero', default:556140 },
+    ],
+    calcular(d) {
+      const vp = ['vp_seguro','vp_soat','vp_impuesto','vp_depreciacion','vp_tramites'].reduce((s,k) => s + num(d[k]), 0);
+      const va = ['va_canon','va_soat','va_combustible'].reduce((s,k) => s + num(d[k]), 0);
+      return { total: vp + va, detalle: `Propio $${fmt(vp)} + Arriendo $${fmt(va)}` };
+    }
+  },
+  logistica: {
+    icono: '📦', nombre: 'Logística',
+    campos: [
+      { id:'placas_blindadas', label:'Placas blindadas (amortización)', tipo:'numero', default:575159 },
+      { id:'drone', label:'Drone (amortización mensual)', tipo:'numero', default:1052500 },
+      { id:'minutas', label:'Libros minuta y papelería', tipo:'numero', default:78400 },
+      { id:'examenes', label:'Exámenes y polígrafo', tipo:'numero', default:407733 },
+      { id:'otros_log', label:'Otros logística', tipo:'numero', default:0 },
+    ],
+    calcular(d) {
+      const total = ['placas_blindadas','drone','minutas','examenes','otros_log'].reduce((s,k) => s + num(d[k]), 0);
+      return { total, detalle: `$${fmt(total)}/mes` };
+    }
+  },
+  caninos: {
+    icono: '🐕', nombre: 'Caninos / binomios',
+    campos: [
+      { id:'can_manutension', label:'Manutención mensual total', tipo:'numero', default:219575 },
+      { id:'can_amortizacion', label:'Amortización caninos (mensual)', tipo:'numero', default:18333 },
+      { id:'can_transporte', label:'Transporte caninos', tipo:'numero', default:0 },
+      { id:'can_otros', label:'Otros caninos', tipo:'numero', default:0 },
+    ],
+    calcular(d) {
+      const total = ['can_manutension','can_amortizacion','can_transporte','can_otros'].reduce((s,k) => s + num(d[k]), 0);
+      return { total, detalle: `$${fmt(total)}/mes` };
+    }
+  },
+  capacitacion: {
+    icono: '🎓', nombre: 'Capacitación',
+    campos: [
+      { id:'cap_reentrenamiento', label:'Reentrenamiento vigilancia', tipo:'numero', default:0 },
+      { id:'cap_supervisores', label:'Capacitación supervisores', tipo:'numero', default:0 },
+      { id:'cap_caninos', label:'Capacitación manejador canino', tipo:'numero', default:0 },
+      { id:'cap_otros', label:'Otros cursos', tipo:'numero', default:0 },
+    ],
+    calcular(d) {
+      const total = ['cap_reentrenamiento','cap_supervisores','cap_caninos','cap_otros'].reduce((s,k) => s + num(d[k]), 0);
+      return { total, detalle: `$${fmt(total)}/mes` };
+    }
+  },
+  polizas: {
+    icono: '🛡️', nombre: 'Pólizas',
+    campos: [
+      { id:'pol_rce', label:'Póliza RCE (mensual)', tipo:'numero', default:499636 },
+      { id:'pol_cumplimiento', label:'Póliza cumplimiento (mensual)', tipo:'numero', default:745463 },
+      { id:'pol_salarios', label:'Póliza salarios (mensual)', tipo:'numero', default:0 },
+      { id:'pol_otras', label:'Otras pólizas', tipo:'numero', default:0 },
+    ],
+    calcular(d) {
+      const total = ['pol_rce','pol_cumplimiento','pol_salarios','pol_otras'].reduce((s,k) => s + num(d[k]), 0);
+      return { total, detalle: `$${fmt(total)}/mes` };
+    }
+  },
+  gastos_admin: {
+    icono: '🏢', nombre: 'Gastos administrativos',
+    campos: [
+      { id:'adm_pct', label:'Como % de ingresos', tipo:'numero', default:8.9, hint:'Forma más común de calcularlo' },
+      { id:'adm_fijo', label:'O ingrese valor fijo mensual', tipo:'numero', default:0, hint:'Si prefieres usar un monto fijo déjalo aquí y pon 0% arriba' },
+    ],
+    calcular(d, totalIngresos) {
+      const porPct = (totalIngresos || 0) * num(d.adm_pct) / 100;
+      const fijo = num(d.adm_fijo);
+      const total = fijo > 0 ? fijo : porPct;
+      return { total, detalle: fijo > 0 ? `Valor fijo $${fmt(fijo)}` : `${num(d.adm_pct)}% de ingresos` };
+    }
+  }
+};
+
+// ─── UTILIDADES ─────────────────────────────────────────────────────────────
+const num = v => parseFloat(v) || 0;
+const fmt = v => Math.round(v).toLocaleString('es-CO');
+const fmtCOP = v => (v < 0 ? '-$' : '$') + fmt(Math.abs(v));
+
+function toast(msg, tipo = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast visible' + (tipo ? ' ' + tipo : '');
+  setTimeout(() => el.className = 'toast', 3000);
+}
+
+// ─── CARGA INICIAL ──────────────────────────────────────────────────────────
+async function init() {
+  try {
+    const { data, error } = await supa.from('modulos').select('*');
+    if (error) throw error;
+    modulos = data;
+    document.getElementById('sync-dot').className = 'sync-dot';
+    document.getElementById('sync-label').textContent = 'Conectado';
+    renderModulos();
+    actualizarResumen();
+  } catch(e) {
+    document.getElementById('sync-dot').className = 'sync-dot error';
+    document.getElementById('sync-label').textContent = 'Sin conexión';
+    toast('Error conectando con Supabase. Verifica la URL y las tablas.', 'error');
+    console.error(e);
+  }
+}
+
+// ─── RENDER MÓDULOS ─────────────────────────────────────────────────────────
+function renderModulos() {
+  const total = modulos.length;
+  const completos = modulos.filter(m => m.completado).length;
+  const pct = Math.round((completos / total) * 100);
+
+  document.getElementById('progreso-fill').style.width = pct + '%';
+  document.getElementById('progreso-pct').textContent = pct + '%';
+  document.getElementById('progreso-titulo').textContent =
+    completos === total ? '¡Todos los módulos completos!' :
+    `${completos} de ${total} módulos completados`;
+
+  const grid = document.getElementById('grid-modulos');
+  grid.innerHTML = modulos.map(m => {
+    const def = DEFS[m.id];
+    if (!def) return '';
+    const datos = m.datos || {};
+    let resumen = '';
+    if (m.completado && def.calcular) {
+      try {
+        const ingM = modulos.find(x => x.id === 'ingresos');
+        const ingDatos = ingM?.datos || {};
+        const ingCalc = DEFS.ingresos.calcular(ingDatos);
+        const calc = def.calcular(datos, ingCalc.total);
+        resumen = calc.detalle || '';
+      } catch(e) {}
+    }
+    return `
+    <div class="modulo ${m.completado ? 'completo' : ''}" onclick="abrirModulo('${m.id}')">
+      <div class="modulo-header">
+        <div class="modulo-icono">${def.icono}</div>
+        <div class="modulo-info">
+          <div class="modulo-nombre">${def.nombre}</div>
+          <div class="modulo-estado">${m.completado ? 'Completado · haz clic para editar' : 'Pendiente · haz clic para diligenciar'}</div>
+        </div>
+        <div class="modulo-check">${m.completado ? '✓' : ''}</div>
+      </div>
+      ${resumen ? `<div class="modulo-resumen">${resumen}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  const todoCompleto = completos === total;
+  document.getElementById('btn-generar').disabled = !todoCompleto;
+}
+
+// ─── ABRIR MODAL ────────────────────────────────────────────────────────────
+function abrirModulo(id) {
+  moduloActivo = id;
+  const def = DEFS[id];
+  const modulo = modulos.find(m => m.id === id);
+  const datos = modulo?.datos || {};
+
+  document.getElementById('modal-icono').textContent = def.icono;
+  document.getElementById('modal-titulo-texto').textContent = def.nombre;
+  document.getElementById('modal-body').innerHTML = buildForm(id, def, datos);
+  document.getElementById('overlay').classList.add('visible');
+
+  // calcular total inicial
+  setTimeout(() => calcularTotal(id), 50);
+}
+
+function buildForm(id, def, datos) {
+  let html = '';
+  let enSeccion = false;
+
+  def.campos.forEach(c => {
+    if (c.seccion) {
+      if (enSeccion) html += '</div>';
+      html += `<div class="form-section"><div class="form-section-title">${c.seccion}</div>`;
+      enSeccion = true;
+      return;
+    }
+    const val = datos[c.id] !== undefined ? datos[c.id] : (c.default !== undefined ? c.default : '');
+
+    if (c.tipo === 'select') {
+      html += `<div class="form-row full"><div class="form-group">
+        <label class="form-label">${c.label}</label>
+        <select class="form-input" id="f_${c.id}" onchange="calcularTotal('${id}')">
+          ${c.opciones.map(o => `<option ${val === o ? 'selected' : ''}>${o}</option>`).join('')}
+        </select>
+      </div></div>`;
+    } else {
+      html += `<div class="form-row"><div class="form-group">
+        <label class="form-label">${c.label}</label>
+        <input class="form-input numero" type="number" id="f_${c.id}" value="${val}" 
+          oninput="calcularTotal('${id}')" placeholder="0">
+        ${c.hint ? `<span class="form-hint">${c.hint}</span>` : ''}
+      </div></div>`;
+    }
+  });
+
+  if (enSeccion) html += '</div>';
+
+  html += `<div class="form-total">
+    <span class="form-total-label">Total mensual</span>
+    <span class="form-total-val" id="form-total-val">$0</span>
+  </div>`;
+
+  return html;
+}
+
+function calcularTotal(id) {
+  const def = DEFS[id];
+  if (!def?.calcular) return;
+  const datos = leerFormulario(id);
+  try {
+    const ingM = modulos.find(x => x.id === 'ingresos');
+    const ingDatos = ingM?.datos || {};
+    const ingCalc = DEFS.ingresos.calcular ? DEFS.ingresos.calcular(ingDatos) : { total: 0 };
+    const calc = def.calcular(datos, ingCalc.total);
+    const el = document.getElementById('form-total-val');
+    if (el) el.textContent = fmtCOP(calc.total);
+  } catch(e) {}
+}
+
+function leerFormulario(id) {
+  const def = DEFS[id];
+  const datos = {};
+  def.campos.forEach(c => {
+    if (c.seccion) return;
+    const el = document.getElementById('f_' + c.id);
+    if (!el) return;
+    datos[c.id] = c.tipo === 'select' ? el.value : el.value;
+  });
+  return datos;
+}
+
+// ─── GUARDAR MÓDULO ─────────────────────────────────────────────────────────
+async function guardarModulo() {
+  if (!moduloActivo) return;
+  const datos = leerFormulario(moduloActivo);
+  const btn = document.getElementById('btn-guardar');
+  btn.textContent = 'Guardando...';
+  btn.disabled = true;
+
+  try {
+    const { error } = await supa.from('modulos').update({
+      datos,
+      completado: true,
+      actualizado_en: new Date().toISOString()
+    }).eq('id', moduloActivo);
+
+    if (error) throw error;
+
+    // actualizar local
+    const idx = modulos.findIndex(m => m.id === moduloActivo);
+    if (idx !== -1) { modulos[idx].datos = datos; modulos[idx].completado = true; }
+
+    cerrarModal();
+    renderModulos();
+    actualizarResumen();
+    toast('Módulo guardado correctamente', 'ok');
+  } catch(e) {
+    toast('Error guardando. Intenta de nuevo.', 'error');
+    console.error(e);
+  } finally {
+    btn.textContent = 'Guardar módulo';
+    btn.disabled = false;
+  }
+}
+
+// ─── CERRAR MODAL ───────────────────────────────────────────────────────────
+function cerrarModal(e) {
+  if (e && e.target !== document.getElementById('overlay')) return;
+  document.getElementById('overlay').classList.remove('visible');
+  moduloActivo = null;
+}
+
+// ─── CALCULAR RESUMEN ───────────────────────────────────────────────────────
+function actualizarResumen() {
+  const ingM = modulos.find(m => m.id === 'ingresos');
+  if (!ingM?.completado) { renderPYG(null); return; }
+
+  const ingCalc = DEFS.ingresos.calcular(ingM.datos);
+  const totalIngresos = ingCalc.total;
+
+  let totalCostos = 0;
+  const detalles = {};
+
+  ['nomina','dotacion','comunicaciones','vehiculos','logistica','caninos','capacitacion','polizas'].forEach(id => {
+    const m = modulos.find(x => x.id === id);
+    if (m?.completado && DEFS[id]?.calcular) {
+      try {
+        const calc = DEFS[id].calcular(m.datos, totalIngresos);
+        detalles[id] = calc;
+        totalCostos += calc.total;
+      } catch(e) {}
+    }
+  });
+
+  const utilBruta = totalIngresos - totalCostos;
+  const admM = modulos.find(m => m.id === 'gastos_admin');
+  let gastoAdmin = 0;
+  if (admM?.completado) {
+    try { gastoAdmin = DEFS.gastos_admin.calcular(admM.datos, totalIngresos).total; } catch(e) {}
+  }
+
+  const utilOp = utilBruta - gastoAdmin;
+  const margen = totalIngresos > 0 ? (utilOp / totalIngresos) * 100 : 0;
+
+  renderPYG({ totalIngresos, totalCostos, utilBruta, gastoAdmin, utilOp, margen, detalles });
+  renderVeredicto(margen, utilOp);
+}
+
+// ─── RENDER P&G ─────────────────────────────────────────────────────────────
+function renderPYG(r) {
+  const c = document.getElementById('pyg-container');
+  if (!r) {
+    c.innerHTML = '<div style="padding:20px 0;text-align:center;color:var(--texto2);font-size:13px">Complete los módulos para ver el estado de resultados</div>';
+    return;
+  }
+
+  const { totalIngresos: ing, totalCostos, utilBruta, gastoAdmin, utilOp, detalles } = r;
+
+  const row = (label, val, cls='', indent='') =>
+    `<div class="pyg-row ${cls}"><span class="pyg-label ${indent}">${label}</span><span class="pyg-val">${fmtCOP(val)}</span></div>`;
+
+  const nomCalc = detalles['nomina'];
+
+  c.innerHTML = `
+    ${row('Ingresos totales', ing, 'total azul')}
+    <div style="height:8px"></div>
+    ${row('Nómina operativa', -(nomCalc?.total||0), 'rojo')}
+    ${nomCalc ? row('· Vigilantes', -(nomCalc.costoVig||0), 'rojo', 'pyg-indent') : ''}
+    ${nomCalc ? row('· Supervisores', -(nomCalc.costoSup||0), 'rojo', 'pyg-indent') : ''}
+    ${row('Dotación y equipos', -(detalles['dotacion']?.total||0), 'rojo')}
+    ${row('Comunicaciones', -(detalles['comunicaciones']?.total||0), 'rojo')}
+    ${row('Vehículos', -(detalles['vehiculos']?.total||0), 'rojo')}
+    ${row('Logística', -(detalles['logistica']?.total||0), 'rojo')}
+    ${row('Caninos', -(detalles['caninos']?.total||0), 'rojo')}
+    ${row('Capacitación', -(detalles['capacitacion']?.total||0), 'rojo')}
+    ${row('Pólizas', -(detalles['polizas']?.total||0), 'rojo')}
+    <div style="height:4px"></div>
+    ${row('Total costos operativos', -totalCostos, 'subtotal total rojo')}
+    <div style="height:4px"></div>
+    ${row('Utilidad bruta', utilBruta, 'total ' + (utilBruta >= 0 ? 'verde' : 'rojo'))}
+    ${row('Gastos administrativos', -gastoAdmin, 'rojo')}
+    <div style="height:4px"></div>
+    ${row('UTILIDAD OPERACIONAL', utilOp, 'subtotal total ' + (utilOp >= 0 ? 'verde' : 'rojo'))}
+    <div style="padding:10px 0; text-align:right; font-size:12px; color:var(--texto2)">
+      Margen operacional: <strong style="color:${utilOp>=0?'var(--verde)':'var(--rojo)'}">${r.margen.toFixed(2)}%</strong>
+    </div>
+  `;
+}
+
+// ─── VEREDICTO ──────────────────────────────────────────────────────────────
+function renderVeredicto(margen, utilOp) {
+  const card = document.getElementById('veredicto-card');
+  const titulo = document.getElementById('verd-titulo');
+  const marg = document.getElementById('verd-margen');
+  const texto = document.getElementById('verd-texto');
+
+  marg.textContent = margen.toFixed(2) + '%';
+
+  if (utilOp < 0) {
+    card.className = 'veredicto perdida';
+    titulo.textContent = '⚠ No es viable';
+    texto.textContent = `El servicio genera una pérdida de ${fmtCOP(Math.abs(utilOp))}/mes. Se requiere ajuste urgente de tarifa o reducción de costos.`;
+  } else if (margen < 3) {
+    card.className = 'veredicto fragil';
+    titulo.textContent = '⚡ Viable pero frágil';
+    texto.textContent = `El servicio es rentable pero con margen muy ajustado. Cualquier variación en costos puede generar pérdidas.`;
+  } else if (margen < 8) {
+    card.className = 'veredicto fragil';
+    titulo.textContent = '📈 Viable, margen moderado';
+    texto.textContent = `El servicio es viable con utilidad de ${fmtCOP(utilOp)}/mes. Hay oportunidades de mejora en gastos administrativos.`;
+  } else {
+    card.className = 'veredicto rentable';
+    titulo.textContent = '✅ Servicio rentable';
+    texto.textContent = `El servicio es financieramente sano con utilidad de ${fmtCOP(utilOp)}/mes. Margen dentro del rango objetivo.`;
+  }
+}
+
+// ─── GENERAR ANÁLISIS ───────────────────────────────────────────────────────
+async function generarAnalisis() {
+  const btn = document.getElementById('btn-generar');
+  btn.textContent = 'Generando...';
+  btn.disabled = true;
+
+  try {
+    // Calcular resumen final
+    const ingM = modulos.find(m => m.id === 'ingresos');
+    const ingCalc = DEFS.ingresos.calcular(ingM.datos);
+    const totalIngresos = ingCalc.total;
+
+    let totalCostos = 0;
+    const detalles = {};
+    ['nomina','dotacion','comunicaciones','vehiculos','logistica','caninos','capacitacion','polizas'].forEach(id => {
+      const m = modulos.find(x => x.id === id);
+      if (m?.completado) {
+        try {
+          const calc = DEFS[id].calcular(m.datos, totalIngresos);
+          detalles[id] = calc.total;
+          totalCostos += calc.total;
+        } catch(e) {}
+      }
+    });
+
+    const admM = modulos.find(m => m.id === 'gastos_admin');
+    const gastoAdmin = admM?.completado ? DEFS.gastos_admin.calcular(admM.datos, totalIngresos).total : 0;
+    const utilBruta = totalIngresos - totalCostos;
+    const utilOp = utilBruta - gastoAdmin;
+    const margen = (utilOp / totalIngresos) * 100;
+    const veredicto = utilOp < 0 ? 'No viable' : margen < 3 ? 'Frágil' : margen < 8 ? 'Moderado' : 'Rentable';
+
+    // Obtener último consecutivo
+    const { data: ultimo } = await supa.from('analisis').select('consecutivo').order('id', { ascending: false }).limit(1);
+    let numConsec = 1;
+    if (ultimo?.length) {
+      const match = ultimo[0].consecutivo.match(/\d+/);
+      if (match) numConsec = parseInt(match[0]) + 1;
+    }
+    const consecutivo = 'ANL-' + String(numConsec).padStart(3, '0');
+
+    const { error } = await supa.from('analisis').insert({
+      consecutivo,
+      resumen: { totalIngresos, totalCostos, gastoAdmin, utilBruta, utilOp, margen, detalles },
+      veredicto,
+      margen: Math.round(margen * 100) / 100
+    });
+
+    if (error) throw error;
+
+    consecutivoActual = { consecutivo, fecha: new Date(), totalIngresos, totalCostos, gastoAdmin, utilBruta, utilOp, margen, veredicto };
+
+    document.getElementById('consec-num').textContent = consecutivo;
+    document.getElementById('consec-fecha').textContent = new Date().toLocaleDateString('es-CO', { day:'2-digit', month:'long', year:'numeric' });
+    document.getElementById('consec-badge').classList.add('visible');
+    document.getElementById('btn-pdf').disabled = false;
+
+    toast(`Análisis ${consecutivo} generado exitosamente`, 'ok');
+  } catch(e) {
+    toast('Error generando análisis', 'error');
+    console.error(e);
+  } finally {
+    btn.textContent = '✦ Generar análisis';
+    btn.disabled = false;
+  }
+}
+
+// ─── EXPORTAR PDF ───────────────────────────────────────────────────────────
+function exportarPDF() {
+  if (!consecutivoActual) return;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ format: 'letter', unit: 'mm' });
+  const c = consecutivoActual;
+  const fecha = new Date().toLocaleDateString('es-CO', { day:'2-digit', month:'long', year:'numeric' });
+  const margenPct = c.margen.toFixed(2);
+
+  // Colores
+  const azulOscuro = [30, 58, 95];
+  const verde = [22, 163, 74];
+  const rojo = [220, 38, 38];
+  const gris = [107, 114, 128];
+  const grisBg = [249, 250, 251];
+  const borde = [229, 231, 235];
+
+  // Header
+  doc.setFillColor(...azulOscuro);
+  doc.rect(0, 0, 216, 40, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(18); doc.setFont(undefined,'bold');
+  doc.text('Análisis de Rentabilidad', 20, 16);
+  doc.setFontSize(10); doc.setFont(undefined,'normal');
+  doc.text('Servicios de Vigilancia — Ruitoque UIC', 20, 24);
+  doc.setFontSize(9);
+  doc.text(`${c.consecutivo}  ·  ${fecha}`, 20, 32);
+
+  // Veredicto badge
+  const colorVerd = c.utilOp < 0 ? rojo : c.margen < 8 ? [217,119,6] : verde;
+  doc.setFillColor(...colorVerd);
+  doc.roundedRect(130, 8, 70, 24, 4, 4, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(10); doc.setFont(undefined,'bold');
+  doc.text(c.veredicto, 165, 18, { align:'center' });
+  doc.setFontSize(14);
+  doc.text(margenPct + '% margen', 165, 27, { align:'center' });
+
+  let y = 52;
+
+  // Función tabla P&G
+  const filaTabla = (label, valor, negrita=false, fondo=false, colorVal=null) => {
+    if (fondo) { doc.setFillColor(...grisBg); doc.rect(14, y-5, 188, 9, 'F'); }
+    doc.setTextColor(...(negrita ? azulOscuro : [55,65,81]));
+    doc.setFont(undefined, negrita ? 'bold' : 'normal');
+    doc.setFontSize(negrita ? 10 : 9.5);
+    doc.text(label, 20, y);
+    doc.setTextColor(...(colorVal || (negrita ? azulOscuro : [55,65,81])));
+    doc.text(fmtCOP(valor), 196, y, { align:'right' });
+    doc.setDrawColor(...borde);
+    doc.line(14, y+2, 202, y+2);
+    y += 9;
+  };
+
+  const filaIndent = (label, valor) => {
+    doc.setTextColor(...gris);
+    doc.setFont(undefined,'normal');
+    doc.setFontSize(8.5);
+    doc.text('    · ' + label, 20, y);
+    doc.text(fmtCOP(valor), 196, y, { align:'right' });
+    doc.setDrawColor(...borde);
+    doc.line(14, y+2, 202, y+2);
+    y += 7.5;
+  };
+
+  // Título sección
+  doc.setFontSize(12); doc.setFont(undefined,'bold'); doc.setTextColor(...azulOscuro);
+  doc.text('Estado de Resultados', 20, y);
+  y += 10;
+
+  const nomM = modulos.find(m => m.id === 'nomina');
+  let costoVig = 0, costoSup = 0;
+  if (nomM?.completado) {
+    try {
+      const nc = DEFS.nomina.calcular(nomM.datos, c.totalIngresos);
+      costoVig = nc.costoVig || 0; costoSup = nc.costoSup || 0;
+    } catch(e) {}
+  }
+
+  filaTabla('Ingresos del contrato', c.totalIngresos, true, false, [...azulOscuro]);
+
+  y += 3;
+  doc.setFontSize(9); doc.setFont(undefined,'bold'); doc.setTextColor(...gris);
+  doc.text('COSTOS OPERATIVOS', 20, y); y += 7;
+
+  const getNom = id => { try { return DEFS[id].calcular(modulos.find(m=>m.id===id)?.datos||{}, c.totalIngresos).total; } catch(e) { return 0; } };
+
+  filaTabla('Nómina operativa', -getNom('nomina'), false, false, [...rojo]);
+  filaIndent('Vigilantes', -costoVig);
+  filaIndent('Supervisores', -costoSup);
+  filaTabla('Dotación y equipos', -getNom('dotacion'), false, false, [...rojo]);
+  filaTabla('Comunicaciones', -getNom('comunicaciones'), false, false, [...rojo]);
+  filaTabla('Vehículos', -getNom('vehiculos'), false, false, [...rojo]);
+  filaTabla('Logística', -getNom('logistica'), false, false, [...rojo]);
+  filaTabla('Caninos / binomios', -getNom('caninos'), false, false, [...rojo]);
+  filaTabla('Capacitación', -getNom('capacitacion'), false, false, [...rojo]);
+  filaTabla('Pólizas', -getNom('polizas'), false, false, [...rojo]);
+
+  y += 2;
+  filaTabla('Total costos operativos', -c.totalCostos, true, true, [...rojo]);
+  y += 2;
+  filaTabla('Utilidad bruta', c.utilBruta, true, false, c.utilBruta>=0 ? [...verde] : [...rojo]);
+  filaTabla('Gastos administrativos', -c.gastoAdmin, false, false, [...rojo]);
+  y += 2;
+  filaTabla('UTILIDAD OPERACIONAL', c.utilOp, true, true, c.utilOp>=0 ? [...verde] : [...rojo]);
+
+  // KPIs resumen
+  y += 12;
+  doc.setFillColor(...azulOscuro);
+  doc.roundedRect(14, y, 188, 28, 4, 4, 'F');
+  doc.setTextColor(255,255,255);
+
+  const kpis = [
+    ['Margen operacional', margenPct + '%'],
+    ['Utilidad mensual', fmtCOP(c.utilOp)],
+    ['Utilidad anual proyectada', fmtCOP(c.utilOp * 12)],
+    ['Costos / Ingresos', ((c.totalCostos/c.totalIngresos)*100).toFixed(1) + '%'],
+  ];
+  kpis.forEach((k, i) => {
+    const x = 20 + i * 47;
+    doc.setFontSize(7.5); doc.setFont(undefined,'normal'); doc.setTextColor(200,210,225);
+    doc.text(k[0], x, y + 9);
+    doc.setFontSize(10); doc.setFont(undefined,'bold'); doc.setTextColor(255,255,255);
+    doc.text(k[1], x, y + 19);
+  });
+
+  // Footer
+  y = 270;
+  doc.setFontSize(8); doc.setFont(undefined,'normal'); doc.setTextColor(...gris);
+  doc.text(`Generado: ${fecha}  ·  ${c.consecutivo}  ·  Sistema de Análisis de Rentabilidad`, 108, y, { align:'center' });
+
+  doc.save(`Analisis_Rentabilidad_${c.consecutivo}.pdf`);
+  toast('PDF generado correctamente', 'ok');
+}
+
+// ─── INICIO ─────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
