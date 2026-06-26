@@ -758,16 +758,11 @@ function abrirMod(id){
   $('ov-mod').className='ov on';
   if(def.esNom)setTimeout(()=>{
     CARGOS.forEach(c=>rNomFila(c.id));
-    const tbody=$('xb__xn');
-    if(tbody){
-      Array.from(tbody.rows).forEach(tr=>{
-        const uid=tr.dataset.uid;
-        if(uid)rXNomFila(uid);
-      });
-    }
+    const tbody=document.getElementById('nom-body');
+    if(tbody)tbody.querySelectorAll('[data-tipo=extra]').forEach(tr=>{if(tr.dataset.uid)rNomRowCalcByUid(tr.dataset.uid);});
     rNomTot();
   },50);
-  else if(def.esOtros)setTimeout(()=>rTotId('otros_costos'),30);
+else if(def.esOtros)setTimeout(()=>rTotId('otros_costos'),30);
   else setTimeout(()=>rTot(id),30);
 }
 function cerrarMod(){$('ov-mod').className='ov';AM=null;}
@@ -804,23 +799,39 @@ function bForm(def,dat){
 
 function bTblExtra(cols,rows,key='_x'){
   const kid=key.replace(/[^a-z0-9]/gi,'_');
-  let h='<div class="add-tbl-wrap"><table class="add-tbl" id="xt_'+kid+'"><thead><tr>';
+  const tbodyRows=rows.map((r,i)=>bXRow(cols,r,kid,i)).join('');
+  const addTr='<tr><td colspan="'+(cols.length+1)+'" style="padding:5px;text-align:center">'+
+    '<button type="button" class="add-btn" data-kid="'+kid+'" onclick="addXRowK(this)" style="display:flex;align-items:center;gap:5px;margin:0 auto;padding:5px 14px">＋ Agregar fila</button>'+
+    '</td></tr>';
+  let h='<div class="ntw" style="margin-bottom:4px"><table class="add-tbl" id="xt_'+kid+'"><thead><tr>';
   cols.forEach(c=>{h+='<th data-fid="'+c.id+'" data-txt="'+(c.txt?'1':'0')+'">'+c.l+'</th>';});
-  h+='<th></th></tr></thead><tbody id="xb_'+kid+'">';
-  rows.forEach((r,i)=>{h+=bXRow(cols,r,i,kid);});
-  h+='</tbody></table></div>';
-  h+='<button type="button" class="add-btn" data-kid="'+kid+'" onclick="addXRow(this.dataset.kid)">＋ Nueva fila</button>';
+  h+='<th></th></tr></thead><tbody id="xb_'+kid+'">'+tbodyRows+addTr+'</tbody></table></div>';
   return h;
 }
+function addXRowK(btn){
+  const kid=btn.dataset.kid;
+  const tbody=$('xb_'+kid);if(!tbody)return;
+  const cols=Array.from(document.querySelectorAll('#xt_'+kid+' thead th')).slice(0,-1).map(th=>({id:th.dataset.fid||'v',l:th.textContent,txt:th.dataset.txt==='1',nr:th.dataset.txt!=='1'}));
+  const addTr=tbody.querySelector('tr:last-child');
+  const idx=tbody.querySelectorAll('[data-row]').length;
+  const newTbody=document.createElement('tbody');
+  newTbody.innerHTML=bXRow(cols,{},kid,idx);
+  tbody.insertBefore(newTbody.firstElementChild,addTr);
+  rTotAM();
+}
 
-function bXRow(cols,dat,idx,kid){
-  let h='<tr>';
+function bXRow(cols,dat,kid,idx){
+  let h='<tr data-row="'+idx+'">';
   cols.forEach(c=>{
-    const v=dat[c.id]||'';
-    if(c.txt){h+='<td><input type="text" placeholder="'+c.l+'" value="'+v+'" class="xc" data-k="'+kid+'" data-f="'+c.id+'" oninput="rTotAM()"></td>';}
-    else{h+='<td><input type="number" placeholder="0" value="'+v+'" class="xc nr" data-k="'+kid+'" data-f="'+c.id+'" oninput="rTotAM()"></td>';}
+    const v=dat&&dat[c.id]!==undefined?dat[c.id]:'';
+    const st='width:100%;padding:5px 7px;border:1.5px solid var(--pl2);border-radius:5px;font-size:12px;background:#fff;color:var(--g1)';
+    if(c.txt){
+      h+='<td><input type="text" placeholder="'+c.l+'" value="'+v+'" class="xc" data-k="'+kid+'" data-f="'+c.id+'" oninput="rTotAM()" style="'+st+'"></td>';
+    }else{
+      h+='<td><input type="number" placeholder="0" value="'+v+'" class="xc nr" data-k="'+kid+'" data-f="'+c.id+'" oninput="rTotAM()" style="'+st+';text-align:right"></td>';
+    }
   });
-  h+='<td><button type="button" class="del-row-btn" onclick="delXRow(this)">×</button></td>';
+  h+='<td><button type="button" class="del-row-btn" onclick="delXRow(this)">x</button></td>';
   h+='</tr>';
   return h;
 }
@@ -882,136 +893,69 @@ document.addEventListener('input',e=>{
 // ── NÓMINA ─────────────────────────────────────────────────────
 function bNomina(dat){
   const cards=CARGOS.map(c=>'<div class="nrc" id="nrc_'+c.id+'"><div class="nrc-l">'+c.n+'</div><div class="nrc-v" id="nrv_'+c.id+'">$0</div></div>').join('');
-
-  const rows=CARGOS.map(c=>{
+  const fixedRows=CARGOS.map(c=>{
     const d=dat[c.id]||{};
-    const fv=(f,dv,ro=false)=>{
-      const val=d[f]!==undefined?n(d[f]):dv;
-      if(ro) return '<td class="td-calc"><div class="ni-ro" id="'+c.id+'_'+f+'">'+cp(val*1)+'</div></td>';
-      return '<td><input type="number" data-c="'+c.id+'" data-f="'+f+'" value="'+val+'" class="ni" oninput="rNomFila(this.dataset.c)" style="text-align:right;width:100%;padding:7px 8px;border:1.5px solid var(--pl2);border-radius:6px;font-size:12px;background:#fff;color:#1a1a1a;font-variant-numeric:tabular-nums"></td>';
+    const fv=(f,dv)=>{
+      const val=d[f]!==undefined?parseFloat(d[f])||0:dv;
+      return '<td><input type="number" data-c="'+c.id+'" data-f="'+f+'" value="'+val+'" class="ni" oninput="rNomFila(this.dataset.c)" style="width:100%;padding:5px 5px;border:1.5px solid var(--pl2);border-radius:5px;font-size:11px;text-align:right;background:#fff"></td>';
     };
-    return '<tr>'+
-      '<td style="min-width:155px"><div class="cn">'+c.n+'</div></td>'+
-      fv('cant',0)+
-      fv('sal',1750905)+
-      fv('ext',1000000)+
-      fv('nos',120000)+
-      fv('rod',0)+
-      fv('tra',200000)+
+    return '<tr data-tipo="fijo" data-cargo="'+c.id+'">'+
+      '<td style="font-size:11.5px;font-weight:600;padding:8px 7px;white-space:nowrap">'+c.n+'</td>'+
+      fv('cant',0)+fv('sal',1750905)+fv('ext',1000000)+fv('nos',120000)+fv('rod',0)+fv('tra',200000)+
       '<td class="td-calc"><div class="ni-ro" id="'+c.id+'_dev">$0</div></td>'+
       '<td class="td-calc"><div class="ni-ro" id="'+c.id+'_ssps">$0</div></td>'+
       '<td class="td-calc stot" id="ns_'+c.id+'">$0</td>'+
-    '</tr>';
+      '<td></td></tr>';
   }).join('');
-
-  const xnCols=[
-    {id:'cargo',l:'Cargo',txt:true},
-    {id:'cant',l:'Cantidad',nr:true},
-    {id:'sal',l:'Salario base',nr:true},
-    {id:'ext',l:'H. extras',nr:true},
-    {id:'nos',l:'No salarial',nr:true},
-    {id:'rod',l:'Rodamiento',nr:true},
-    {id:'tra',l:'Aux. transp.',nr:true},
-  ];
-
-  return'<div class="nom-info">Diligencie los datos por cargo. El costo total se calcula con la fórmula oficial de seguridad social y prestaciones.</div>'+
+  const extraRows=(dat._xn||[]).map((r,i)=>bNomRow(r,i)).join('');
+  const addRow='<tr><td colspan="11" style="padding:5px;text-align:center">'+
+    '<button type="button" onclick="addNomRow()" class="add-btn" style="display:flex;align-items:center;gap:5px;margin:0 auto;padding:5px 14px">＋ Agregar cargo</button>'+
+    '</td></tr>';
+  return '<div class="nom-info">Diligencie los datos por cargo.</div>'+
     '<div class="nom-res">'+cards+'</div>'+
-    '<div class="ntw"><table class="nt"><thead><tr>'+
-    '<th>Cargo</th><th>Cantidad</th><th>Salario base</th><th>Horas extras</th><th>No salarial</th><th>Rodamiento</th><th>Aux. transporte</th>'+
-    '<th class="th-calc">Total devengado</th><th class="th-calc">SS - PS</th><th class="th-calc">Costo total</th>'+
-    '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
-    '<div class="fsec"><div class="fsec-t">Nueva fila</div>'+bNomExtra(dat._xn||[])+'</div>'+
+    '<div class="ntw"><table class="nt" style="min-width:900px"><thead><tr>'+
+    '<th style="min-width:120px">Cargo</th><th>Cantidad</th><th>Salario base</th><th>H. extras</th><th>No salarial</th><th>Rodamiento</th><th>Aux. transporte</th>'+
+    '<th class="th-calc">Total devengado</th><th class="th-calc">SS - PS</th><th class="th-calc">Costo total</th><th style="width:28px"></th>'+
+    '</tr></thead><tbody id="nom-body">'+fixedRows+extraRows+addRow+'</tbody></table></div>'+
     '<div class="ftot"><span class="ftot-l">Total nómina operativa mensual</span><span class="ftot-v" id="ngrand">$0</span></div>';
 }
-
-
-
-
-function rNomFila(cid){
-  if(!cid)return;
-  const cant=getRaw(cid,'cant');
-  const sal=getRaw(cid,'sal');
-  const ext=getRaw(cid,'ext');
-  const nos=getRaw(cid,'nos');
-  const rod=getRaw(cid,'rod');
-  const tra=getRaw(cid,'tra');
-  const dev=calcDevengado(sal,ext,rod,tra,nos);
-  const devTotal=dev*cant;
-  const cto=calcCostoTotal(sal,ext,rod,tra,nos,cant);
-  const total=devTotal+cto;
-  const devEl=$(cid+'_dev');if(devEl)devEl.textContent=cp(devTotal);
-  const sspsEl=$(cid+'_ssps');if(sspsEl)sspsEl.textContent=cp(cto);
-  const totEl=$('ns_'+cid);if(totEl)totEl.textContent=cp(total);
-  const rv=$('nrv_'+cid),rc=$('nrc_'+cid);
-  if(rv)rv.textContent=cp(total);
-  if(rc)rc.className='nrc'+(cant>0?' on':'');
-  rNomTot();
-}
-function getRaw(cid,f){
-  const el=document.querySelector('[data-c="'+cid+'"][data-f="'+f+'"]');
-  if(!el)return 0;
-  return parseFloat(el.value)||0;
-}
-
-function rNomTot(){
-  let grand=0;
-  CARGOS.forEach(c=>{
-    const el=$('ns_'+c.id);
-    if(el){
-      const v=el.textContent.replace(/[\$\s\.]/g,'').replace(',','.');
-      grand+=parseFloat(v)||0;
-    }
-  });
-  const tbody=$('xb__xn');
-  if(tbody){
-    Array.from(tbody.rows).forEach(tr=>{
-      const uid=tr.dataset.uid;
-      if(!uid)return;
-      const el=$('xnt_'+uid);
-      if(el){
-        const v=el.textContent.replace(/[\$\s\.]/g,'').replace(',','.');
-        grand+=parseFloat(v)||0;
-      }
-    });
-  }
-  const el=$('ngrand');if(el)el.textContent=cp(grand);
-}
-
-
-// Genera fila extra de nómina con columnas calculadas
-
-function bNomExtra(rows){
-  let h='<div class="ntw" style="margin-bottom:8px"><table class="nt" style="min-width:900px"><thead><tr>'+
-    '<th>Cargo</th><th>Cantidad</th><th>Salario base</th><th>H. extras</th><th>No salarial</th><th>Rodamiento</th><th>Aux. transp.</th>'+
-    '<th class="th-calc">Total devengado</th><th class="th-calc">SS - PS</th><th class="th-calc">Costo total</th><th></th>'+
-    '</tr></thead><tbody id="xb__xn">';
-  rows.forEach((r,i)=>{h+=bXRowNom(r,i);});
-  h+='</tbody></table></div>';
-  h+='<button type="button" class="add-btn" onclick="addXNomRow()">＋ Nueva fila</button>';
-  return h;
-}
-
-function iNom(uid,f,val){
-  const st='width:100%;padding:6px 7px;border:1.5px solid var(--pl2);border-radius:6px;font-size:11.5px;text-align:right;background:#fff';
-  return '<input type="number" data-xn="'+uid+'" data-f="'+f+'" value="'+val+'" class="nix" style="'+st+'">';
-}
-function bXRowNom(dat,idx){
-  const g=(f,dv)=>dat[f]!==undefined?dat[f]:(dv||0);
-  const uid='xn'+idx;
-  const stxt='width:100%;padding:6px 7px;border:1.5px solid var(--pl2);border-radius:6px;font-size:11.5px;background:#fff';
-  return '<tr id="xnr_'+uid+'" data-uid="'+uid+'">'+
-    '<td><input type="text" data-xn="'+uid+'" data-f="cargo" value="'+g('cargo','')+'" placeholder="Cargo" style="'+stxt+'"></td>'+
-    '<td>'+iNom(uid,'cant',g('cant',0))+'</td>'+
-    '<td>'+iNom(uid,'sal',g('sal',1750905))+'</td>'+
-    '<td>'+iNom(uid,'ext',g('ext',1000000))+'</td>'+
-    '<td>'+iNom(uid,'nos',g('nos',120000))+'</td>'+
-    '<td>'+iNom(uid,'rod',g('rod',0))+'</td>'+
-    '<td>'+iNom(uid,'tra',g('tra',200000))+'</td>'+
-    '<td class="td-calc"><div class="ni-ro" id="xnd_'+uid+'">$0</div></td>'+
-    '<td class="td-calc"><div class="ni-ro" id="xnss_'+uid+'">$0</div></td>'+
-    '<td class="td-calc stot" id="xnt_'+uid+'">$0</td>'+
-    '<td><button type="button" class="del-row-btn" data-del="xnr_'+uid+'">×</button></td>'+
+function bNomRow(r,idx){
+  const g=(f,dv)=>r&&r[f]!==undefined?parseFloat(r[f])||0:dv;
+  const uid='xn_'+idx;
+  const fi=(f,dv)=>'<td><input type="number" data-uid="'+uid+'" data-f="'+f+'" value="'+g(f,dv)+'" class="nix" oninput="rNomRowCalc(this)" style="width:100%;padding:5px 5px;border:1.5px solid var(--pl2);border-radius:5px;font-size:11px;text-align:right;background:#fff"></td>';
+  return '<tr data-tipo="extra" data-uid="'+uid+'">'+
+    '<td><input type="text" data-uid="'+uid+'" data-f="cargo" value="'+(r&&r.cargo||'')+'" placeholder="Cargo" style="width:100%;padding:5px 5px;border:1.5px solid var(--pl2);border-radius:5px;font-size:11px;background:#fff"></td>'+
+    fi('cant',0)+fi('sal',1750905)+fi('ext',1000000)+fi('nos',120000)+fi('rod',0)+fi('tra',200000)+
+    '<td class="td-calc"><div class="ni-ro" id="'+uid+'_dev">$0</div></td>'+
+    '<td class="td-calc"><div class="ni-ro" id="'+uid+'_ssps">$0</div></td>'+
+    '<td class="td-calc stot" id="'+uid+'_tot">$0</td>'+
+    '<td><button type="button" class="del-row-btn" onclick="delNomRow(this)">x</button></td>'+
   '</tr>';
+}
+
+function delXRow(btn){btn.closest('tr').remove();rTotAM();}
+function delNomRow(btn){btn.closest('tr').remove();rNomTot();}
+function addNomRow(){
+  const tbody=$('nom-body');if(!tbody)return;
+  const extras=tbody.querySelectorAll('[data-tipo=extra]');
+  const idx=extras.length;
+  const addTr=tbody.querySelector('tr:last-child');
+  const newTr=document.createElement('tbody');
+  newTr.innerHTML=bNomRow({},idx);
+  tbody.insertBefore(newTr.firstElementChild,addTr);
+  rNomRowCalcByUid('xn_'+idx);
+}
+function rNomRowCalc(inp){rNomRowCalcByUid(inp.dataset.uid);}
+function rNomRowCalcByUid(uid){
+  const g=f=>{const el=document.querySelector('[data-uid="'+uid+'"][data-f="'+f+'"]');return el?parseFloat(el.value)||0:0;};
+  const cant=g('cant'),sal=g('sal'),ext=g('ext'),nos=g('nos'),rod=g('rod'),tra=g('tra');
+  const dev=calcDevengado(sal,ext,rod,tra,nos)*cant;
+  const cto=calcCostoTotal(sal,ext,rod,tra,nos,cant);
+  const tot=dev+cto;
+  const de=$(uid+'_dev');if(de)de.textContent=cp(dev);
+  const ss=$(uid+'_ssps');if(ss)ss.textContent=cp(cto);
+  const te=$(uid+'_tot');if(te)te.textContent=cp(tot);
+  rNomTot();
 }
 
 function rXNomFila(uid){
@@ -1055,15 +999,20 @@ async function guardar(){
   if(!AM||!AA)return;
   const def=DEFS[AM];let datos={};
   if(def.esNom){
-    CARGOS.forEach(c=>{datos[c.id]={};['cant','sal','ext','rod','tra','fac'].forEach(f=>{const e=document.querySelector('[data-c="'+c.id+'"][data-f="'+f+'"]');datos[c.id][f]=e?e.value:0;});});
-    // Leer filas extra de nómina con nueva estructura
-    const tbody_xn=$('xb__xn');
-    datos._xn=tbody_xn?Array.from(tbody_xn.rows).map((tr,i)=>{
-      const uid='xn'+i;
-      const gf=f=>{const el=tr.querySelector('[data-f="'+f+'"]')||tr.querySelector('[data-xn="'+uid+'"][data-f="'+f+'"]');return el?el.value:'';};
+    CARGOS.forEach(c=>{
+      datos[c.id]={};
+      ['cant','sal','ext','nos','rod','tra'].forEach(f=>{
+        const e=document.querySelector('[data-c="'+c.id+'"][data-f="'+f+'"]');
+        datos[c.id][f]=e?e.value:0;
+      });
+    });
+    const tbody=document.getElementById('nom-body');
+    datos._xn=tbody?Array.from(tbody.querySelectorAll('[data-tipo=extra]')).map(tr=>{
+      const uid=tr.dataset.uid;
+      const gf=f=>{const el=tr.querySelector('[data-f="'+f+'"]');return el?el.value:'';};
       return {cargo:gf('cargo'),cant:gf('cant'),sal:gf('sal'),ext:gf('ext'),nos:gf('nos'),rod:gf('rod'),tra:gf('tra')};
-    }).filter(r=>r.cant||r.sal):[];
-  }else if(def.esOtros){
+    }).filter(r=>parseFloat(r.cant)||parseFloat(r.sal)):[];
+}else if(def.esOtros){
     datos._x=getXRows('_x');
   }else{
     datos=leerForm(AM);
