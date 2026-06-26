@@ -31,7 +31,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .dot.ok{background:#4ade80;box-shadow:0 0 6px #4ade8066}
 .dot.err{background:#f87171}
 .slbl{font-size:11px;color:#9aa0a6;font-weight:500}
-.btn-nuevo{display:flex;align-items:center;gap:6px;padding:7px 14px;background:linear-gradient(135deg,#8B0000,#C0392B);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s}
+.btn-inicio{display:flex;align-items:center;gap:6px;padding:7px 14px;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}.btn-inicio:hover{background:rgba(255,255,255,.14)}.btn-nuevo{display:flex;align-items:center;gap:6px;padding:7px 14px;background:linear-gradient(135deg,#8B0000,#C0392B);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s}
 .btn-nuevo:hover{background:linear-gradient(135deg,#a00,#d44);transform:translateY(-1px)}
 
 /* LAYOUT */
@@ -251,6 +251,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ts{background:#dcfce7;color:#15803d}
 .stot{text-align:right;font-weight:800;font-size:13px;color:#1a1a1a;white-space:nowrap;padding-right:14px!important}
 
+
+/* FILAS ADICIONALES */
+.add-row-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;background:var(--plata);border:1.5px dashed var(--plata2);border-radius:7px;font-size:12px;font-weight:600;color:var(--g3);cursor:pointer;width:100%;margin-top:8px;transition:all .2s}
+.add-row-btn:hover{border-color:var(--rojo);color:var(--rojo);background:var(--rojo-bg)}
+.extra-rows{display:flex;flex-direction:column;gap:7px;margin-top:8px}
+.extra-row{display:grid;grid-template-columns:1fr 160px 28px;gap:8px;align-items:center}
+.extra-row input{padding:7px 10px;border:1.5px solid var(--plata2);border-radius:7px;font-size:12.5px;color:var(--g1);background:#fff}
+.extra-row input:focus{outline:none;border-color:var(--rojo)}
+.extra-row input.nr{text-align:right;font-variant-numeric:tabular-nums}
+.extra-row-del{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--rojo-bd);background:var(--rojo-bg);color:var(--rojo);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.extra-row-del:hover{background:var(--rojo);color:#fff}
+/* OTROS COSTOS */
+.otros-wrap{display:flex;flex-direction:column;gap:7px}
+.otros-intro{font-size:12px;color:var(--g3);padding:10px 13px;background:var(--plata);border-radius:8px;border-left:3px solid var(--rojo);margin-bottom:12px;line-height:1.5}
 /* CONFIRM */
 .conf-ov{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;display:none;align-items:center;justify-content:center}
 .conf-ov.vis{display:flex}
@@ -288,7 +302,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="dot" id="dot"></div>
       <span class="slbl" id="slbl">Conectando...</span>
     </div>
-    <button class="btn-nuevo" onclick="abrirModalCliente()">＋ Nuevo análisis</button>
+    <button class="btn-inicio" onclick="irInicio()">⌂ Inicio</button><button class="btn-nuevo" onclick="abrirModalCliente()">＋ Nuevo análisis</button>
   </div>
 </header>
 
@@ -511,6 +525,11 @@ const CARGOS=[
   {id:'supervisor',nombre:'Supervisor',               tag:'SUP', cls:'ts'},
 ];
 
+function costoExtras(datos){
+  if(!datos?._extras)return 0;
+  return datos._extras.reduce((s,e)=>s+(parseFloat(e.val)||0),0);
+}
+
 function costoNomina(datos){
   if(!datos)return 0;
   return CARGOS.reduce((s,c)=>{
@@ -521,7 +540,7 @@ function costoNomina(datos){
 }
 function personasNomina(datos){if(!datos)return 0;return CARGOS.reduce((s,c)=>s+n((datos[c.id]||{}).cant),0);}
 
-const IDS_MODULOS = ['ingresos','nomina','dotacion','comunicaciones','vehiculos','logistica','caninos','capacitacion','polizas','gastos_admin'];
+const IDS_MODULOS = ['ingresos','nomina','dotacion','comunicaciones','vehiculos','logistica','caninos','capacitacion','polizas','otros_costos','gastos_admin'];
 
 const DEFS = {
   ingresos:{ico:'💰',nom:'Ingresos del contrato',
@@ -560,6 +579,7 @@ const DEFS = {
     campos:[{id:'rce',lbl:'Póliza RCE (mensual)',nr:true,def:499636},{id:'cumplim',lbl:'Póliza cumplimiento (mensual)',nr:true,def:745463},{id:'salarios',lbl:'Póliza salarios (mensual)',nr:true,def:0},{id:'otras',lbl:'Otras pólizas',nr:true,def:0}],
     calc(d){const t=['rce','cumplim','salarios','otras'].reduce((s,k)=>s+n(d[k]),0);return{tot:t,det:'$'+fmt(t)+'/mes'};}
   },
+  otros_costos:{ico:'➕',nom:'Otros costos',esOtros:true,calc(d){const t=costoExtras(d);return{tot:t,det:'$'+fmt(t)+'/mes'};}},
   gastos_admin:{ico:'🏢',nom:'Gastos administrativos',
     campos:[{id:'pct',lbl:'Como % de ingresos',nr:true,def:8.9,hint:'Forma más común de calcularlo'},{id:'fijo',lbl:'O valor fijo mensual',nr:true,def:0,hint:'Si usas valor fijo, pon 0% arriba'}],
     calc(d,ing){const p=(ing||0)*n(d.pct)/100,f=n(d.fijo),t=f>0?f:p;return{tot:t,det:f>0?'Fijo $'+fmt(f):n(d.pct)+'% de ingresos'};}
@@ -725,7 +745,7 @@ function renderMods(){
       try{
         res=def.esNom
           ? '$'+fmt(costoNomina(m.datos))+'/mes · '+personasNomina(m.datos)+' personas'
-          : def.calc(m.datos||{},ingTot).det;
+          : def.esOtros?'$'+fmt(costoExtras(m.datos))+'/mes':def.calc(m.datos||{},ingTot).det;
       }catch(e){}
     }
     return'<div class="mod'+(m.completado?' ok':'')+'" data-id="'+id+'" onclick="abrirMod(this.dataset.id)">'+
@@ -746,10 +766,11 @@ function abrirMod(id){
   const dat=(getMods()[id]?.datos)||{};
   document.getElementById('mico').textContent=def.ico+' ';
   document.getElementById('mtit').textContent=def.nom;
-  document.getElementById('mbody').innerHTML=def.esNom?buildNomina(dat):buildForm(def,dat);
+  document.getElementById('mbody').innerHTML=def.esNom?buildNomina(dat):def.esOtros?buildOtrosCostos(dat):buildForm(def,dat);
   document.getElementById('ov').classList.add('vis');
-  if(!def.esNom)setTimeout(()=>updTotal(id),30);
-  else setTimeout(updNomTotales,30);
+  if(def.esNom)setTimeout(updNomTotales,30);
+  else if(def.esOtros)setTimeout(updTotalOtros,30);
+  else setTimeout(()=>updTotal(id),30);
 }
 function cerrarModal(){document.getElementById('ov').classList.remove('vis');ACTIVO_MOD=null;}
 
@@ -762,8 +783,51 @@ function buildForm(def,dat){
   });
   if(def.secs)def.secs.forEach(s=>{h+='<div class="fsec"><div class="fsec-t">'+s.tit+'</div>';addC(s.campos);h+='</div>';});
   else if(def.campos){h+='<div class="fsec">';addC(def.campos);h+='</div>';}
+  // Filas adicionales guardadas
+  const extras=dat._extras||[];
+  h+='<div class="fsec"><div class="fsec-t">Conceptos adicionales</div>';
+  h+='<div class="extra-rows" id="extra-rows">';
+  extras.forEach((e,i)=>{h+=buildExtraRow(e.nom||'',e.val||0,i);});
+  h+='</div>';
+  h+='<button type="button" class="add-row-btn" onclick="agregarFila()">＋ Agregar concepto</button>';
+  h+='</div>';
   h+='<div class="ftotal"><span class="ftotal-l">Total mensual</span><span class="ftotal-v" id="ftv">$0</span></div>';
   return h;
+}
+
+function buildExtraRow(nom,val,idx){
+  return '<div class="extra-row" data-idx="'+idx+'">'+
+    '<input type="text" placeholder="Concepto" value="'+nom+'" class="er-nom" oninput="updTotalActivo()">'+
+    '<input type="number" placeholder="0" value="'+val+'" class="er-val nr" oninput="updTotalActivo()">'+
+    '<button type="button" class="extra-row-del" onclick="eliminarFila(this)">×</button>'+
+  '</div>';
+}
+
+function agregarFila(){
+  const cont=document.getElementById('extra-rows');
+  if(!cont)return;
+  const idx=cont.children.length;
+  cont.insertAdjacentHTML('beforeend',buildExtraRow('',0,idx));
+  updTotalActivo();
+}
+
+function eliminarFila(btn){
+  btn.closest('.extra-row').remove();
+  updTotalActivo();
+}
+
+function updTotalActivo(){if(ACTIVO_MOD&&!DEFS[ACTIVO_MOD]?.esNom&&!DEFS[ACTIVO_MOD]?.esOtros)updTotal(ACTIVO_MOD);else if(DEFS[ACTIVO_MOD]?.esOtros)updTotalOtros();}
+
+function leerExtras(){
+  const rows=document.querySelectorAll('#extra-rows .extra-row');
+  return Array.from(rows).map(r=>({nom:r.querySelector('.er-nom').value,val:r.querySelector('.er-val').value})).filter(e=>e.nom||parseFloat(e.val));
+}
+
+function sumaExtras(){
+  return (document.querySelectorAll('#extra-rows .extra-row')||[]).reduce((s,r)=>{
+    const v=parseFloat(r.querySelector('.er-val')?.value||0)||0;
+    return s+v;
+  },0);
 }
 function updTotal(id){
   const def=DEFS[id];if(!def?.calc)return;
@@ -773,8 +837,10 @@ function updTotal(id){
   try{
     const ingDat=(getMods()['ingresos']?.datos)||{};
     const ing=getMods()['ingresos']?.completado?DEFS.ingresos.calc(ingDat).tot:0;
+    const base=def.calc(dat,ing).tot;
+    const extras=sumaExtras();
     const el=document.getElementById('ftv');
-    if(el)el.textContent=cop(def.calc(dat,ing).tot);
+    if(el)el.textContent=cop(base+extras);
   }catch(e){}
 }
 document.addEventListener('input',e=>{if(e.target.id?.startsWith('fc_')&&ACTIVO_MOD&&!DEFS[ACTIVO_MOD]?.esNom)updTotal(ACTIVO_MOD);});
@@ -794,9 +860,32 @@ function buildNomina(dat){
     '<div class="ntbl-wrap"><table class="ntbl"><thead><tr>'+
     '<th>Cargo</th><th>Cantidad</th><th>Salario base</th><th>Horas extras</th><th>Rodamiento</th><th>Aux. transporte</th><th>Factor prest. %</th><th>Costo total</th>'+
     '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '<div class="fsec" style="margin-top:16px"><div class="fsec-t">Conceptos adicionales</div>'+
+    '<div class="extra-rows" id="extra-rows">'+
+    (dat._extras||[]).map((e,i)=>buildExtraRow(e.nom||\'\',e.val||0,i)).join(\'\') +
+    '</div>'+
+    '<button type="button" class="add-row-btn" onclick="agregarFila()">＋ Agregar concepto</button>'+
+    '</div>'+
     '<div class="ftotal"><span class="ftotal-l">Total nómina operativa mensual</span><span class="ftotal-v" id="ngrandtot">$0</span></div>';
 }
 document.addEventListener('input',e=>{if(e.target.classList.contains('ni'))updNomFila(e.target.dataset.cargo);});
+function buildOtrosCostos(dat){
+  const extras=dat._extras||[];
+  let rows='';
+  if(extras.length){
+    rows=extras.map((e,i)=>buildExtraRow(e.nom||'',e.val||0,i)).join('');
+  }
+  return '<div class="otros-intro">Registre aquí cualquier costo operativo que no encaje en los módulos anteriores. Agregue un concepto y valor por fila.</div>'+
+    '<div class="extra-rows" id="extra-rows">'+rows+'</div>'+
+    '<button type="button" class="add-row-btn" onclick="agregarFila()">＋ Agregar concepto</button>'+
+    '<div class="ftotal"><span class="ftotal-l">Total otros costos</span><span class="ftotal-v" id="ftv">$0</span></div>';
+}
+
+function updTotalOtros(){
+  const el=document.getElementById('ftv');
+  if(el)el.textContent=cop(sumaExtras());
+}
+
 function updNomFila(cid){
   const g=f=>n(document.querySelector('[data-cargo="'+cid+'"][data-f="'+f+'"]')?.value);
   const tot=(g('sal')+g('ext')+g('rod')+g('tra'))*g('cant')*(1+(g('fac')||52.19)/100);
@@ -821,9 +910,12 @@ async function guardarModulo(){
   const def=DEFS[ACTIVO_MOD]; let datos={};
   if(def.esNom){
     CARGOS.forEach(c=>{datos[c.id]={};['cant','sal','ext','rod','tra','fac'].forEach(f=>{const el=document.querySelector('[data-cargo="'+c.id+'"][data-f="'+f+'"]');datos[c.id][f]=el?el.value:0;});});
+  }else if(def.esOtros){
+    datos._extras=leerExtras();
   }else{
     const gc=campos=>campos.forEach(c=>{const el=document.getElementById('fc_'+c.id);if(el)datos[c.id]=el.value;});
     if(def.secs)def.secs.forEach(s=>gc(s.campos));else if(def.campos)gc(def.campos);
+    datos._extras=leerExtras();
   }
   const btn=document.getElementById('bguardar');btn.textContent='Guardando...';btn.disabled=true;
   try{
@@ -854,7 +946,7 @@ function calcResumen(){
   let costos=0;const det={};
   const nomM=mods['nomina'];
   if(nomM?.completado){const t=costoNomina(nomM.datos);det.nomina=t;costos+=t;}
-  ['dotacion','comunicaciones','vehiculos','logistica','caninos','capacitacion','polizas'].forEach(id=>{
+  ['dotacion','comunicaciones','vehiculos','logistica','caninos','capacitacion','polizas','otros_costos'].forEach(id=>{
     const m=mods[id];if(m?.completado&&DEFS[id]?.calc)try{const c=DEFS[id].calc(m.datos||{},ing);det[id]=c.tot;costos+=c.tot;}catch(e){}
   });
   const ub=ing-costos;
@@ -898,6 +990,15 @@ function renderVerd(mg,uo){
 }
 
 // ─── MODAL CLIENTE ───────────────────────────────────────
+function irInicio(){
+  ANALISIS_ACTIVO=null;
+  CONSEC=null;
+  document.getElementById('home-view').style.display='block';
+  document.getElementById('analisis-view').style.display='none';
+  // Deseleccionar en sidebar
+  document.querySelectorAll('.sa-card').forEach(c=>c.classList.remove('activo'));
+}
+
 function abrirModalCliente(){
   CLIENTE_SEL=null;
   document.getElementById('cm-buscar').value='';
@@ -965,7 +1066,7 @@ async function crearAnalisis(){
       cliente_nombre:CLIENTE_SEL.nombre,
       modulos:{},
       modulos_completados:0,
-      total_modulos:10,
+      total_modulos:11,
       estado:'en_curso'
     });
     const creado=Array.isArray(nuevo)?nuevo[0]:nuevo;
@@ -986,7 +1087,7 @@ async function generarAnalisis(){
     const ing=DEFS.ingresos.calc(mods['ingresos']?.datos||{}).tot;
     let costos=0;const det={};
     if(mods['nomina']?.completado){const t=costoNomina(mods['nomina'].datos);det.nomina=t;costos+=t;}
-    ['dotacion','comunicaciones','vehiculos','logistica','caninos','capacitacion','polizas'].forEach(id=>{
+    ['dotacion','comunicaciones','vehiculos','logistica','caninos','capacitacion','polizas','otros_costos'].forEach(id=>{
       const m=mods[id];if(m?.completado&&DEFS[id]?.calc)try{const c=DEFS[id].calc(m.datos||{},ing);det[id]=c.tot;costos+=c.tot;}catch(e){}
     });
     let adm=0;if(mods['gastos_admin']?.completado)try{adm=DEFS.gastos_admin.calc(mods['gastos_admin'].datos||{},ing).tot;}catch(e){}
@@ -1074,7 +1175,7 @@ function exportarPDF(){
   doc.setFontSize(12);doc.setFont(undefined,'bold');doc.setTextColor(17,17,17);
   doc.text('Estado de Resultados',20,y);y+=9;
   const mods=getMods();
-  const gn=id=>{try{const m=mods[id];if(!m?.completado)return 0;if(id==='nomina')return costoNomina(m.datos);return DEFS[id].calc(m.datos||{},c.ing).tot;}catch(e){return 0;}};
+  const gn=id=>{try{const m=mods[id];if(!m?.completado)return 0;if(id==='nomina')return costoNomina(m.datos)+costoExtras(m.datos);if(id==='otros_costos')return costoExtras(m.datos);return DEFS[id].calc(m.datos||{},c.ing).tot+costoExtras(m.datos);}catch(e){return 0;}};
   row('Ingresos del contrato',c.ing,true,false,[29,78,216]);y+=2;
   row('Nómina operativa',-gn('nomina'),false,false,[192,57,43]);
   row('Dotación y equipos',-gn('dotacion'),false,false,[192,57,43]);
@@ -1083,7 +1184,8 @@ function exportarPDF(){
   row('Logística',-gn('logistica'),false,false,[192,57,43]);
   row('Caninos / binomios',-gn('caninos'),false,false,[192,57,43]);
   row('Capacitación',-gn('capacitacion'),false,false,[192,57,43]);
-  row('Pólizas',-gn('polizas'),false,false,[192,57,43]);y+=2;
+  row('Pólizas',-gn('polizas'),false,false,[192,57,43]);
+  row('Otros costos',-gn('otros_costos'),false,false,[192,57,43]);y+=2;
   row('Total costos operativos',-c.costos,true,true,[192,57,43]);y+=2;
   row('Utilidad bruta',c.ub,true,false,c.ub>=0?[22,163,74]:[192,57,43]);
   row('Gastos administrativos',-c.adm,false,false,[192,57,43]);y+=2;
