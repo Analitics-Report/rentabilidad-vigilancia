@@ -889,7 +889,6 @@ function bNomina(dat){
       fv('rod',0)+
       fv('tra',200000)+
       '<td class="td-calc"><div class="ni-ro" id="'+c.id+'_dev">$0</div></td>'+
-      fv('fac',42.18)+
       '<td class="td-calc"><div class="ni-ro" id="'+c.id+'_ssps">$0</div></td>'+
       '<td class="td-calc stot" id="ns_'+c.id+'">$0</td>'+
     '</tr>';
@@ -903,14 +902,13 @@ function bNomina(dat){
     {id:'nos',l:'No salarial',nr:true},
     {id:'rod',l:'Rodamiento',nr:true},
     {id:'tra',l:'Aux. transp.',nr:true},
-    {id:'fac',l:'Factor %',nr:true}
   ];
 
   return'<div class="nom-info">Diligencie los datos por cargo. El costo total se calcula con la fórmula oficial de seguridad social y prestaciones.</div>'+
     '<div class="nom-res">'+cards+'</div>'+
     '<div class="ntw"><table class="nt"><thead><tr>'+
     '<th>Cargo</th><th>Cantidad</th><th>Salario base</th><th>Horas extras</th><th>No salarial</th><th>Rodamiento</th><th>Aux. transporte</th>'+
-    '<th class="th-calc">Total devengado</th><th>Factor %</th><th class="th-calc">SS - PS</th><th class="th-calc">Costo total</th>'+
+    '<th class="th-calc">Total devengado</th><th class="th-calc">SS - PS</th><th class="th-calc">Costo total</th>'+
     '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
     '<div class="fsec"><div class="fsec-t">Nueva fila</div>'+bTblExtra(xnCols,dat._xn||[],'_xn')+'</div>'+
     '<div class="ftot"><span class="ftot-l">Total nómina operativa mensual</span><span class="ftot-v" id="ngrand">$0</span></div>';
