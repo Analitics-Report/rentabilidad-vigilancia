@@ -737,11 +737,11 @@ function bForm(def,dat){
 function bTblExtra(cols,rows,key='_x'){
   const kid=key.replace(/[^a-z0-9]/gi,'_');
   let h='<div class="add-tbl-wrap"><table class="add-tbl" id="xt_'+kid+'"><thead><tr>';
-  cols.forEach(c=>{h+='<th>'+c.l+'</th>';});
+  cols.forEach(c=>{h+='<th data-fid="'+c.id+'" data-txt="'+(c.txt?'1':'0')+'">'+c.l+'</th>';});
   h+='<th></th></tr></thead><tbody id="xb_'+kid+'">';
   rows.forEach((r,i)=>{h+=bXRow(cols,r,i,kid);});
   h+='</tbody></table></div>';
-  h+='<button type="button" class="add-btn" onclick="addXRow(''+kid+'','+JSON.stringify(cols).replace(/'/g,"\'")+')" >＋ Nueva fila</button>';
+  h+='<button type="button" class="add-btn" data-kid="'+kid+'" onclick="addXRow(this.dataset.kid)">＋ Nueva fila</button>';
   return h;
 }
 
@@ -757,11 +757,15 @@ function bXRow(cols,dat,idx,kid){
   return h;
 }
 
-function addXRow(kid,cols){
+function addXRow(kid){
   const tbody=$('xb_'+kid);
   if(!tbody)return;
-  const idx=tbody.children.length;
-  tbody.insertAdjacentHTML('beforeend',bXRow(cols,{},idx,kid));
+  // Leer columnas del encabezado de la tabla
+  const thead=document.querySelector('#xt_'+kid+' thead tr');
+  const cols=thead?Array.from(thead.querySelectorAll('th')).slice(0,-1).map(th=>({
+    id:th.dataset.fid||'v',l:th.textContent,txt:th.dataset.txt==='1',nr:th.dataset.txt!=='1'
+  })):[];
+  tbody.insertAdjacentHTML('beforeend',bXRow(cols,{},tbody.children.length,kid));
   rTotAM();
 }
 
