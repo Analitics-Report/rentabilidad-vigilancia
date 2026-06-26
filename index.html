@@ -599,6 +599,11 @@ async function init(){
     document.getElementById('slbl').textContent='Conectado';
     renderSidebar();
     actualizarStats();
+    // Asegurar que el home se muestre si no hay análisis activo
+    if(!ANALISIS_ACTIVO){
+      document.getElementById('home-view').style.display='block';
+      document.getElementById('analisis-view').style.display='none';
+    }
   }catch(e){
     document.getElementById('dot').className='dot err';
     document.getElementById('slbl').textContent='Error';
@@ -641,7 +646,11 @@ function renderSidebar(){filtrarSidebar();}
 
 function renderSidebarItems(lista){
   const el = document.getElementById('sb-list');
-  if(!lista.length){el.innerHTML='<div class="sb-empty">No hay análisis aún.<br><br><button onclick="abrirModalCliente()" style="padding:7px 14px;background:var(--rojo);color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:12px;font-weight:700">＋ Crear análisis</button></div>';return;}
+  if(!lista.length){
+    const hayFiltros=document.getElementById('sb-buscar')?.value||document.getElementById('sb-fecha')?.value||document.getElementById('sb-estado')?.value;
+    el.innerHTML='<div class="sb-empty">'+(hayFiltros?'Sin resultados para los filtros aplicados.':'No hay análisis aún.')+'<br><br><button onclick="abrirModalCliente()" style="padding:7px 14px;background:var(--rojo);color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:12px;font-weight:700">＋ Crear análisis</button></div>';
+    return;
+  }
 
   // Agrupar por cliente
   const grupos = {};
