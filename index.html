@@ -217,6 +217,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .del-row-btn{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--rbd);background:var(--rbg);color:var(--rojo);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .del-row-btn:hover{background:var(--rojo);color:#fff}
 /* NÓMINA */
+
+/* SEPARADOR MILES */
+.ni-fmt{width:100%;padding:7px 8px;border:1.5px solid var(--pl2);border-radius:6px;font-size:12px;text-align:right;font-variant-numeric:tabular-nums;background:#fff;color:#1a1a1a;transition:border .15s}
+.ni-fmt:focus{outline:none;border-color:var(--rojo);background:#fff8f8}
+.ni-ro{width:100%;padding:7px 8px;border-radius:6px;font-size:12px;text-align:right;font-variant-numeric:tabular-nums;background:var(--pl);color:var(--g1);font-weight:700;border:1.5px solid var(--pl2);cursor:default}
+.nt th.th-calc{background:rgba(139,0,0,.25)}
+.nt td.td-calc{background:var(--pl)}
+
 .nom-info{font-size:12px;color:var(--g3);padding:9px 12px;background:var(--pl);border-radius:8px;border-left:3px solid var(--rojo);margin-bottom:12px;line-height:1.5}
 .nom-res{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-bottom:13px}
 .nrc{background:var(--pl);border-radius:8px;padding:10px 11px;border:1.5px solid var(--pl2);transition:all .2s}
@@ -482,6 +490,31 @@ function confirmar(titulo,msg,advert,cb){
 function confOk(){$('cov').className='cov';if(CONF_CB)CONF_CB();CONF_CB=null;}
 function confNo(){$('cov').className='cov';CONF_CB=null;}
 
+
+// Formateo de inputs con separador de miles
+function fmtNum(v){
+  const num = parseFloat(String(v).replace(/[^0-9.-]/g,''))||0;
+  return num===0?'':Math.round(num).toLocaleString('es-CO');
+}
+function parseFmt(v){
+  return parseFloat(String(v).replace(/\./g,'').replace(/,/g,'.'))||0;
+}
+function bindFmt(inp){
+  inp.addEventListener('focus',function(){
+    const raw = parseFmt(this.value);
+    this.value = raw===0?'':raw;
+    this.type='number';
+  });
+  inp.addEventListener('blur',function(){
+    this.type='text';
+    const raw = parseFloat(this.value)||0;
+    this.value = raw===0?'':raw.toLocaleString('es-CO');
+    this.dataset.raw = raw;
+  });
+  inp.dataset.raw = parseFmt(inp.value)||0;
+}
+function valFmt(inp){return parseFmt(inp.dataset.raw||inp.value);}
+
 const CARGOS=[
   {id:'guardia',   n:'Guardia de Seguridad',   tag:'G',  cls:'tg'},
   {id:'movil',     n:'Guardia Móvil',           tag:'GM', cls:'tm'},
@@ -490,16 +523,41 @@ const CARGOS=[
   {id:'supervisor',n:'Supervisor',              tag:'SUP',cls:'ts'},
 ];
 
+function calcCostoTotal(sal,ext,rod,tra,nos,cant){
+  // Fórmula oficial de seguridad social y prestaciones
+  const se = sal+ext;
+  const set = sal+ext+tra;
+  const ct = (
+    se*0.12 +    // salud empleador
+    se*0.04 +    // pension adicional
+    se*0.0435 +  // ARL (promedio)
+    set*0.0833*2 + // cesantias + intereses x2
+    set*0.0833*0.12 + // prima sobre cesantias
+    sal*0.0417   // vacaciones
+  );
+  return ct * cant;
+}
+function calcDevengado(sal,ext,rod,tra,nos){
+  return sal+ext+nos+rod+tra;
+}
 function cNom(d){
   if(!d)return 0;
-  return CARGOS.reduce((s,c)=>{
+  const base = CARGOS.reduce((s,c)=>{
     const x=d[c.id]||{};
-    const base=(n(x.sal)+n(x.ext)+n(x.rod)+n(x.tra))*n(x.cant)*(1+(n(x.fac)||52.19)/100);
-    return s+base;
-  },0)+(d._xn||[]).reduce((s,r)=>{
-    const cant=n(r.cant),sal=n(r.sal),ext=n(r.ext),rod=n(r.rod),tra=n(r.tra),fac=n(r.fac)||52.19;
-    return s+(sal+ext+rod+tra)*cant*(1+fac/100);
+    const cant=n(x.cant);
+    if(!cant)return s;
+    const sal=n(x.sal),ext=n(x.ext),rod=n(x.rod),tra=n(x.tra),nos=n(x.nos);
+    const dev=calcDevengado(sal,ext,rod,tra,nos)*cant;
+    const cto=calcCostoTotal(sal,ext,rod,tra,nos,cant);
+    return s+dev+cto;
   },0);
+  const extra=(d._xn||[]).reduce((s,r)=>{
+    const cant=n(r.cant),sal=n(r.sal),ext=n(r.ext),rod=n(r.rod),tra=n(r.tra),nos=n(r.nos||0);
+    const dev=calcDevengado(sal,ext,rod,tra,nos)*cant;
+    const cto=calcCostoTotal(sal,ext,rod,tra,nos,cant);
+    return s+dev+cto;
+  },0);
+  return base+extra;
 }
 function pNom(d){
   if(!d)return 0;
@@ -814,46 +872,93 @@ document.addEventListener('input',e=>{
 // ── NÓMINA ─────────────────────────────────────────────────────
 function bNomina(dat){
   const cards=CARGOS.map(c=>'<div class="nrc" id="nrc_'+c.id+'"><div class="nrc-l">'+c.n+'</div><div class="nrc-v" id="nrv_'+c.id+'">$0</div></div>').join('');
+
   const rows=CARGOS.map(c=>{
     const d=dat[c.id]||{};
-    const fi=(f,dv)=>'<input type="number" data-c="'+c.id+'" data-f="'+f+'" value="'+(d[f]!==undefined?d[f]:dv)+'" placeholder="0" class="ni">';
-    return'<tr><td style="min-width:145px"><div class="cn">'+c.n+'</div><span class="ct '+c.cls+'">'+c.tag+'</span></td>'+
-      '<td>'+fi('cant',0)+'</td><td>'+fi('sal',1423500)+'</td><td>'+fi('ext',0)+'</td>'+
-      '<td>'+fi('rod',0)+'</td><td>'+fi('tra',200000)+'</td><td>'+fi('fac',52.19)+'</td>'+
-      '<td class="stot" id="ns_'+c.id+'">$0</td></tr>';
+    const fv=(f,dv,ro=false)=>{
+      const val=d[f]!==undefined?n(d[f]):dv;
+      const fmt=val?val.toLocaleString('es-CO'):'';
+      if(ro) return '<td class="td-calc"><div class="ni-ro" id="'+c.id+'_'+f+'">'+fmt+'</div></td>';
+      return '<td><input type="text" data-c="'+c.id+'" data-f="'+f+'" value="'+fmt+'" class="ni-fmt" oninput="rNomFila(''+c.id+'')" onfocus="this.type='number';this.value=this.dataset.raw||0" onblur="this.type='text';this.dataset.raw=this.value;this.value=parseFloat(this.value)?parseFloat(this.value).toLocaleString('es-CO'):''"></td>';
+    };
+    return '<tr>'+
+      '<td style="min-width:155px"><div class="cn">'+c.n+'</div></td>'+
+      fv('cant',0)+
+      fv('sal',1750905)+
+      fv('ext',1000000)+
+      fv('nos',120000)+
+      fv('rod',0)+
+      fv('tra',200000)+
+      '<td class="td-calc"><div class="ni-ro" id="'+c.id+'_dev">$0</div></td>'+
+      fv('fac',42.18)+
+      '<td class="td-calc"><div class="ni-ro" id="'+c.id+'_ssps">$0</div></td>'+
+      '<td class="td-calc stot" id="ns_'+c.id+'">$0</td>'+
+    '</tr>';
   }).join('');
-  // Filas adicionales de nómina con mismas columnas
-  const xnCols=[{id:'cargo',l:'Cargo',txt:true},{id:'cant',l:'Cantidad',nr:true},{id:'sal',l:'Salario base',nr:true},{id:'ext',l:'H. extras',nr:true},{id:'rod',l:'Rodamiento',nr:true},{id:'tra',l:'Aux. transp.',nr:true},{id:'fac',l:'Factor %',nr:true}];
-  return'<div class="nom-info">Diligencie los datos por cargo. El costo incluye automáticamente el factor prestacional.</div>'+
+
+  const xnCols=[
+    {id:'cargo',l:'Cargo',txt:true},
+    {id:'cant',l:'Cantidad',nr:true},
+    {id:'sal',l:'Salario base',nr:true},
+    {id:'ext',l:'H. extras',nr:true},
+    {id:'nos',l:'No salarial',nr:true},
+    {id:'rod',l:'Rodamiento',nr:true},
+    {id:'tra',l:'Aux. transp.',nr:true},
+    {id:'fac',l:'Factor %',nr:true}
+  ];
+
+  return'<div class="nom-info">Diligencie los datos por cargo. El costo total se calcula con la fórmula oficial de seguridad social y prestaciones.</div>'+
     '<div class="nom-res">'+cards+'</div>'+
     '<div class="ntw"><table class="nt"><thead><tr>'+
-    '<th>Cargo</th><th>Cantidad</th><th>Salario base</th><th>Horas extras</th><th>Rodamiento</th><th>Aux. transporte</th><th>Factor prest. %</th><th>Costo total</th>'+
+    '<th>Cargo</th><th>Cantidad</th><th>Salario base</th><th>Horas extras</th><th>No salarial</th><th>Rodamiento</th><th>Aux. transporte</th>'+
+    '<th class="th-calc">Total devengado</th><th>Factor %</th><th class="th-calc">SS - PS</th><th class="th-calc">Costo total</th>'+
     '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
     '<div class="fsec"><div class="fsec-t">Nueva fila</div>'+bTblExtra(xnCols,dat._xn||[],'_xn')+'</div>'+
     '<div class="ftot"><span class="ftot-l">Total nómina operativa mensual</span><span class="ftot-v" id="ngrand">$0</span></div>';
 }
 
-document.addEventListener('input',e=>{if(e.target.classList.contains('ni'))rNomFila(e.target.dataset.c);});
+
+
+
 function rNomFila(cid){
-  const g=f=>n(document.querySelector('[data-c="'+cid+'"][data-f="'+f+'"]')?.value);
-  const tot=(g('sal')+g('ext')+g('rod')+g('tra'))*g('cant')*(1+(g('fac')||52.19)/100);
-  const el=$('ns_'+cid);if(el)el.textContent=cp(tot);rNomTot();
+  if(!cid)return;
+  const cant=getRaw(cid,'cant');
+  const sal=getRaw(cid,'sal');
+  const ext=getRaw(cid,'ext');
+  const nos=getRaw(cid,'nos');
+  const rod=getRaw(cid,'rod');
+  const tra=getRaw(cid,'tra');
+  const dev=calcDevengado(sal,ext,rod,tra,nos);
+  const devTotal=dev*cant;
+  const cto=calcCostoTotal(sal,ext,rod,tra,nos,cant);
+  const total=devTotal+cto;
+  const devEl=$(cid+'_dev');if(devEl)devEl.textContent=cp(devTotal);
+  const sspsEl=$(cid+'_ssps');if(sspsEl)sspsEl.textContent=cp(cto);
+  const totEl=$('ns_'+cid);if(totEl)totEl.textContent=cp(total);
+  const rv=$('nrv_'+cid),rc=$('nrc_'+cid);
+  if(rv)rv.textContent=cp(total);
+  if(rc)rc.className='nrc'+(cant>0?' on':'');
+  rNomTot();
 }
+function getRaw(cid,f){
+  const el=document.querySelector('[data-c="'+cid+'"][data-f="'+f+'"]');
+  if(!el)return 0;
+  if(el.dataset.raw!==undefined)return parseFloat(el.dataset.raw)||0;
+  return n(el.value);
+}
+
 function rNomTot(){
   let grand=0;
   CARGOS.forEach(c=>{
-    const g=f=>n(document.querySelector('[data-c="'+c.id+'"][data-f="'+f+'"]')?.value);
-    const cant=g('cant'),tot=(g('sal')+g('ext')+g('rod')+g('tra'))*cant*(1+(g('fac')||52.19)/100);
-    const rv=$('nrv_'+c.id),rc=$('nrc_'+c.id);
-    if(rv)rv.textContent=cp(tot);if(rc)rc.className='nrc'+(cant>0?' on':'');
-    grand+=tot;
+    const txt=$('ns_'+c.id)?.textContent||'0';
+    grand+=parseFloat(txt.replace(/[^0-9,-]/g,'').replace(/\./g,'').replace(',','.'))||0;
   });
-  // Extras nómina
   const tbody=$('xb__xn');
   if(tbody){
     Array.from(tbody.rows).forEach(tr=>{
       const g=f=>{const el=tr.querySelector('[data-f="'+f+'"]');return n(el?.value);};
-      grand+=(g('sal')+g('ext')+g('rod')+g('tra'))*g('cant')*(1+(g('fac')||52.19)/100);
+      const cant=g('cant'),sal=g('sal'),ext=g('ext'),rod=g('rod'),tra=g('tra'),nos=g('nos')||0;
+      grand+=calcDevengado(sal,ext,rod,tra,nos)*cant+calcCostoTotal(sal,ext,rod,tra,nos,cant);
     });
   }
   const el=$('ngrand');if(el)el.textContent=cp(grand);
