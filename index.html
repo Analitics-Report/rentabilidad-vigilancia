@@ -946,6 +946,38 @@ function addNomRow(){
   rNomRowCalcByUid('xn_'+idx);
 }
 function rNomRowCalc(inp){rNomRowCalcByUid(inp.dataset.uid);}
+
+function rNomFila(cid){
+  if(!cid)return;
+  const g=f=>{const el=document.querySelector('[data-c="'+cid+'"][data-f="'+f+'"]');return el?parseFloat(el.value)||0:0;};
+  const cant=g('cant'),sal=g('sal'),ext=g('ext'),nos=g('nos'),rod=g('rod'),tra=g('tra');
+  const dev=calcDevengado(sal,ext,rod,tra,nos)*cant;
+  const cto=calcCostoTotal(sal,ext,rod,tra,nos,cant);
+  const tot=dev+cto;
+  const de=$(cid+'_dev');if(de)de.textContent=cp(dev);
+  const ss=$(cid+'_ssps');if(ss)ss.textContent=cp(cto);
+  const te=$('ns_'+cid);if(te)te.textContent=cp(tot);
+  const rv=$('nrv_'+cid),rc=$('nrc_'+cid);
+  if(rv)rv.textContent=cp(tot);
+  if(rc)rc.className='nrc'+(cant>0?' on':'');
+  rNomTot();
+}
+function rNomTot(){
+  let grand=0;
+  CARGOS.forEach(c=>{
+    const el=$('ns_'+c.id);
+    if(el){const v=parseFloat(el.textContent.replace(/[^0-9]/g,''))||0;grand+=v;}
+  });
+  const tbody=document.getElementById('nom-body');
+  if(tbody){
+    tbody.querySelectorAll('[data-tipo=extra]').forEach(tr=>{
+      const uid=tr.dataset.uid;
+      const el=$(uid+'_tot');
+      if(el){const v=parseFloat(el.textContent.replace(/[^0-9]/g,''))||0;grand+=v;}
+    });
+  }
+  const el=$('ngrand');if(el)el.textContent=cp(grand);
+}
 function rNomRowCalcByUid(uid){
   const g=f=>{const el=document.querySelector('[data-uid="'+uid+'"][data-f="'+f+'"]');return el?parseFloat(el.value)||0:0;};
   const cant=g('cant'),sal=g('sal'),ext=g('ext'),nos=g('nos'),rod=g('rod'),tra=g('tra');
