@@ -606,9 +606,12 @@ async function init(){
   }
 }
 
-function actualizarStats(){
+async function actualizarStats(){
+  try{
+    const clientes = await sbGet('clientes','select=nit');
+    document.getElementById('stat-clientes').textContent = Array.isArray(clientes)?clientes.length:0;
+  }catch(e){}
   document.getElementById('stat-total').textContent = ANALISIS_LIST.length;
-  document.getElementById('stat-clientes').textContent = CLIENTES_CACHE.length;
   document.getElementById('stat-completos').textContent = ANALISIS_LIST.filter(a=>a.estado==='completado').length;
 }
 
@@ -999,7 +1002,7 @@ function irInicio(){
   document.querySelectorAll('.sa-card').forEach(c=>c.classList.remove('activo'));
 }
 
-function abrirModalCliente(){
+async function abrirModalCliente(){
   CLIENTE_SEL=null;
   document.getElementById('cm-buscar').value='';
   document.getElementById('cm-results').className='cm-results';
@@ -1007,6 +1010,11 @@ function abrirModalCliente(){
   document.getElementById('cm-sel').className='cm-sel-cliente';
   document.getElementById('cm-crear-analisis').disabled=true;
   document.getElementById('ov-cliente').classList.add('vis');
+  // Refrescar lista de clientes
+  try{
+    const cl = await sbGet('clientes','select=*&order=nombre.asc');
+    if(Array.isArray(cl)) CLIENTES_CACHE=cl;
+  }catch(e){}
 }
 function cerrarModalCliente(){document.getElementById('ov-cliente').classList.remove('vis');}
 
