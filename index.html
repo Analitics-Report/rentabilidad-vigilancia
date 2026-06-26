@@ -756,7 +756,14 @@ function abrirMod(id){
   $('m-ico').textContent=def.ico+' ';$('m-tit').textContent=def.num+'. '+def.n;
   $('mbody').innerHTML=def.esNom?bNomina(dat):def.esOtros?bOtros(dat):bForm(def,dat);
   $('ov-mod').className='ov on';
-  if(def.esNom)setTimeout(rNomTot,30);
+  if(def.esNom)setTimeout(()=>{
+    // Recalcular cargos fijos
+    CARGOS.forEach(c=>rNomFila(c.id));
+    // Recalcular filas extra existentes
+    const tbody=$('xb__xn');
+    if(tbody)Array.from(tbody.rows).forEach((tr,i)=>rXNomFila('xn'+i));
+    rNomTot();
+  },50);
   else if(def.esOtros)setTimeout(()=>rTotId('otros_costos'),30);
   else setTimeout(()=>rTot(id),30);
 }
@@ -1000,7 +1007,11 @@ function bXRowNom(dat,idx){
 }
 
 function rXNomFila(uid){
-  const g=f=>{const el=document.querySelector('[data-xn="'+uid+'"][data-f="'+f+'"]');return parseFloat(el?.value)||0;};
+  const g=f=>{
+    const el=document.querySelector('[data-xn="'+uid+'"][data-f="'+f+'"]');
+    if(!el)return 0;
+    return parseFloat(el.value)||0;
+  };
   const cant=g('cant'),sal=g('sal'),ext=g('ext'),nos=g('nos'),rod=g('rod'),tra=g('tra');
   const dev=calcDevengado(sal,ext,rod,tra,nos)*cant;
   const cto=calcCostoTotal(sal,ext,rod,tra,nos,cant);
@@ -1015,8 +1026,7 @@ function addXNomRow(){
   const tbody=$('xb__xn');if(!tbody)return;
   const idx=tbody.children.length;
   tbody.insertAdjacentHTML('beforeend',bXRowNom({},idx));
-  // Calcular con defaults
-  rXNomFila('xn'+idx);
+  setTimeout(()=>rXNomFila('xn'+idx),50);
 }
 
 // ── OTROS COSTOS ───────────────────────────────────────────────
