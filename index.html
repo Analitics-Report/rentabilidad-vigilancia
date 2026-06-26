@@ -657,8 +657,9 @@ function bExtSec(dat,solo=false){
   return'<div class="ext-rows" id="ext-rows">'+rows+'</div><button type="button" class="add-btn" onclick="addExt()">＋ Agregar concepto</button>';
 }
 function bExtRow(nom,val){
-  return'<div class="ext-row"><input type="text" placeholder="Concepto" value="'+nom+'" class="en" oninput="rExtTot()"><input type="number" placeholder="0" value="'+val+'" class="ev nr" oninput="rExtTot()"><button type="button" class="ext-del" onclick="this.closest('.ext-row').remove();rExtTot()">×</button></div>';
+  return'<div class="ext-row"><input type="text" placeholder="Concepto" value="'+nom+'" class="en" oninput="rExtTot()"><input type="number" placeholder="0" value="'+val+'" class="ev nr" oninput="rExtTot()"><button type="button" class="ext-del" onclick="elimFila(this)">×</button></div>';
 }
+function elimFila(btn){btn.closest(".ext-row").remove();rExtTot();}
 function addExt(){const c=$('ext-rows');if(c)c.insertAdjacentHTML('beforeend',bExtRow('',0));rExtTot();}
 function rExtTot(){
   const t=Array.from(document.querySelectorAll('.ev')).reduce((s,e)=>s+(parseFloat(e.value)||0),0);
