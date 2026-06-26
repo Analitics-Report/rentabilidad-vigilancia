@@ -877,9 +877,8 @@ function bNomina(dat){
     const d=dat[c.id]||{};
     const fv=(f,dv,ro=false)=>{
       const val=d[f]!==undefined?n(d[f]):dv;
-      const fmt=val?val.toLocaleString('es-CO'):'';
-      if(ro) return '<td class="td-calc"><div class="ni-ro" id="'+c.id+'_'+f+'">'+fmt+'</div></td>';
-      return '<td><input type="text" data-c="'+c.id+'" data-f="'+f+'" value="'+fmt+'" class="ni-fmt" oninput="rNomFila(''+c.id+'')" onfocus="this.type='number';this.value=this.dataset.raw||0" onblur="this.type='text';this.dataset.raw=this.value;this.value=parseFloat(this.value)?parseFloat(this.value).toLocaleString('es-CO'):''"></td>';
+      if(ro) return '<td class="td-calc"><div class="ni-ro" id="'+c.id+'_'+f+'">'+cp(val*1)+'</div></td>';
+      return '<td><input type="number" data-c="'+c.id+'" data-f="'+f+'" value="'+val+'" class="ni" oninput="rNomFila(this.dataset.c)" style="text-align:right;width:100%;padding:7px 8px;border:1.5px solid var(--pl2);border-radius:6px;font-size:12px;background:#fff;color:#1a1a1a;font-variant-numeric:tabular-nums"></td>';
     };
     return '<tr>'+
       '<td style="min-width:155px"><div class="cn">'+c.n+'</div></td>'+
@@ -943,8 +942,7 @@ function rNomFila(cid){
 function getRaw(cid,f){
   const el=document.querySelector('[data-c="'+cid+'"][data-f="'+f+'"]');
   if(!el)return 0;
-  if(el.dataset.raw!==undefined)return parseFloat(el.dataset.raw)||0;
-  return n(el.value);
+  return parseFloat(el.value)||0;
 }
 
 function rNomTot(){
