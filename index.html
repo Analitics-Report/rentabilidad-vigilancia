@@ -557,7 +557,8 @@ function cNom(d){
     const cto=calcCostoTotal(sal,ext,rod,tra,nos,cant);
     return s+dev+cto;
   },0);
-  return base+extra;
+  const dot=d._dot?(['uniformes','chalecos','bodycam','linternas','bastones','botiquin'].reduce((s,k)=>s+(parseFloat(d._dot[k])||0),0)+(d._dot._xd||[]).reduce((s,e)=>s+(parseFloat(e.v)||0),0)):0;
+  return base+extra+dot;
 }
 function pNom(d){
   if(!d)return 0;
@@ -568,7 +569,7 @@ function pNom(d){
 function cExt(d,key='_x'){if(!d||!d[key])return 0;return d[key].reduce((s,e)=>s+(parseFloat(e.v)||0),0);}
 
 // ORDEN MÓDULOS: ingresos=1 ... otros_costos=11
-const IDS=['ingresos','nomina','dotacion','comunicaciones','vehiculos','logistica','caninos','capacitacion','polizas','gastos_admin','otros_costos'];
+const IDS=['ingresos','nomina','comunicaciones','vehiculos','logistica','caninos','capacitacion','polizas','gastos_admin','otros_costos'];
 
 const DEFS={
   ingresos:{num:1,ico:'💰',n:'Ingresos del contrato',
@@ -576,7 +577,7 @@ const DEFS={
     sinExtra:true,
     calc(d){const b=n(d.ct),e=d.ce==='Sí'?n(d.ve):0;return{t:b+e,det:'$'+fm(b+e)+'/mes'};}
   },
-  nomina:{num:2,ico:'👷',n:'Nómina operativa',esNom:true,
+  nomina:{num:2,ico:'👷',n:'Nómina y Dotación',esNom:true,
     calc(d){const t=cNom(d);return{t,det:'$'+fm(t)+'/mes'};}
   },
   dotacion:{num:3,ico:'👔',n:'Dotación y equipos',
@@ -584,44 +585,44 @@ const DEFS={
     campos:[{id:'uniformes',l:'Uniformes y calzado',nr:true,dv:0},{id:'chalecos',l:'Chalecos antibalas/multipropósito',nr:true,dv:0},{id:'bodycam',l:'Cámaras bodycam',nr:true,dv:0},{id:'linternas',l:'Linternas tácticas',nr:true,dv:0},{id:'bastones',l:'Bastones / tonfas',nr:true,dv:0},{id:'botiquin',l:'Botiquín y EPP',nr:true,dv:0}],
     calc(d){const t=['uniformes','chalecos','bodycam','linternas','bastones','botiquin'].reduce((s,k)=>s+n(d[k]),0)+cExt(d);return{t,det:'$'+fm(t)+'/mes'};}
   },
-  comunicaciones:{num:4,ico:'📡',n:'Comunicaciones',
+  comunicaciones:{num:3,ico:'📡',n:'Comunicaciones',
     cols:[{id:'concepto',l:'Concepto',txt:true},{id:'v',l:'Valor mensual',nr:true}],
     campos:[{id:'cr',l:'Cantidad radios POC',nr:true,dv:32},{id:'ar',l:'Amortización radios (mensual)',nr:true,dv:530480},{id:'pd',l:'Plan de datos total',nr:true,dv:700800},{id:'cel',l:'Celulares / smartphones',nr:true,dv:0}],
     calc(d){const t=n(d.ar)+n(d.pd)+n(d.cel)+cExt(d);return{t,det:n(d.cr)+' radios · $'+fm(t)+'/mes'};}
   },
-  vehiculos:{num:5,ico:'🚗',n:'Vehículos',
+  vehiculos:{num:4,ico:'🚗',n:'Vehículos',
     secs:[
       {tit:'Vehículo propio',key:'_xvp',cols:[{id:'concepto',l:'Concepto',txt:true},{id:'v',l:'Valor',nr:true}],campos:[{id:'vs',l:'Seguro todo riesgo',nr:true,dv:362456},{id:'vt',l:'SOAT (mensual)',nr:true,dv:78592},{id:'vi',l:'Impuesto vehicular',nr:true,dv:580388},{id:'vd',l:'Depreciación mensual',nr:true,dv:1658250},{id:'vo',l:'Trámites y otros',nr:true,dv:0}]},
       {tit:'Vehículo arrendado',key:'_xva',cols:[{id:'concepto',l:'Concepto',txt:true},{id:'v',l:'Valor',nr:true}],campos:[{id:'ac',l:'Canon de arrendamiento',nr:true,dv:3270000},{id:'at',l:'SOAT (mensual)',nr:true,dv:49483},{id:'ab',l:'Combustible',nr:true,dv:556140}]}
     ],
     calc(d){const vp=n(d.vs)+n(d.vt)+n(d.vi)+n(d.vd)+n(d.vo)+cExt(d,'_xvp');const va=n(d.ac)+n(d.at)+n(d.ab)+cExt(d,'_xva');return{t:vp+va,det:'Propio $'+fm(vp)+' + Arriendo $'+fm(va)};}
   },
-  logistica:{num:6,ico:'📦',n:'Logística',
+  logistica:{num:5,ico:'📦',n:'Logística',
     cols:[{id:'concepto',l:'Concepto',txt:true},{id:'v',l:'Valor mensual',nr:true}],
     campos:[{id:'pl',l:'Placas blindadas (amort. mensual)',nr:true,dv:575159},{id:'dr',l:'Drone (amortización mensual)',nr:true,dv:1052500},{id:'mi',l:'Minutas y papelería',nr:true,dv:78400},{id:'ex',l:'Exámenes y polígrafo',nr:true,dv:407733}],
     calc(d){const t=['pl','dr','mi','ex'].reduce((s,k)=>s+n(d[k]),0)+cExt(d);return{t,det:'$'+fm(t)+'/mes'};}
   },
-  caninos:{num:7,ico:'🐕',n:'Caninos / binomios',
+  caninos:{num:6,ico:'🐕',n:'Caninos / binomios',
     cols:[{id:'concepto',l:'Concepto',txt:true},{id:'v',l:'Valor mensual',nr:true}],
     campos:[{id:'mn',l:'Manutención mensual total',nr:true,dv:219575},{id:'am',l:'Amortización caninos',nr:true,dv:18333},{id:'tr',l:'Transporte caninos',nr:true,dv:0}],
     calc(d){const t=['mn','am','tr'].reduce((s,k)=>s+n(d[k]),0)+cExt(d);return{t,det:'$'+fm(t)+'/mes'};}
   },
-  capacitacion:{num:8,ico:'🎓',n:'Capacitación',
+  capacitacion:{num:7,ico:'🎓',n:'Capacitación',
     cols:[{id:'concepto',l:'Concepto',txt:true},{id:'v',l:'Valor mensual',nr:true}],
     campos:[{id:'re',l:'Reentrenamiento vigilancia',nr:true,dv:0},{id:'cs',l:'Capacitación supervisores',nr:true,dv:0},{id:'cc',l:'Manejador canino',nr:true,dv:0}],
     calc(d){const t=['re','cs','cc'].reduce((s,k)=>s+n(d[k]),0)+cExt(d);return{t,det:'$'+fm(t)+'/mes'};}
   },
-  polizas:{num:9,ico:'🛡️',n:'Pólizas',
+  polizas:{num:8,ico:'🛡️',n:'Pólizas',
     cols:[{id:'concepto',l:'Concepto',txt:true},{id:'v',l:'Valor mensual',nr:true}],
     campos:[{id:'rc',l:'Póliza RCE (mensual)',nr:true,dv:499636},{id:'cu',l:'Póliza cumplimiento (mensual)',nr:true,dv:745463},{id:'sa',l:'Póliza salarios (mensual)',nr:true,dv:0}],
     calc(d){const t=['rc','cu','sa'].reduce((s,k)=>s+n(d[k]),0)+cExt(d);return{t,det:'$'+fm(t)+'/mes'};}
   },
-  gastos_admin:{num:10,ico:'🏢',n:'Gastos administrativos',
+  gastos_admin:{num:9,ico:'🏢',n:'Gastos administrativos',
     campos:[{id:'pc',l:'Como % de ingresos',nr:true,dv:8.9,hint:'Forma más común'},{id:'fi',l:'O valor fijo mensual',nr:true,dv:0,hint:'Si usas fijo, pon 0% arriba'}],
     sinExtra:true,
     calc(d,ing){const p=(ing||0)*n(d.pc)/100,f=n(d.fi),t=f>0?f:p;return{t,det:f>0?'Fijo $'+fm(f):n(d.pc)+'% de ingresos'};}
   },
-  otros_costos:{num:11,ico:'➕',n:'Otros costos',esOtros:true,
+  otros_costos:{num:10,ico:'➕',n:'Otros costos',esOtros:true,
     cols:[{id:'concepto',l:'Concepto',txt:true},{id:'v',l:'Valor mensual',nr:true}],
     calc(d){const t=cExt(d);return{t,det:'$'+fm(t)+'/mes'};}
   }
@@ -761,6 +762,7 @@ function abrirMod(id){
     const tbody=document.getElementById('nom-body');
     if(tbody)tbody.querySelectorAll('[data-tipo=extra]').forEach(tr=>{if(tr.dataset.uid)rNomRowCalcByUid(tr.dataset.uid);});
     rNomTot();
+    setTimeout(rDotTotal,60);
   },50);
 else if(def.esOtros)setTimeout(()=>rTotId('otros_costos'),30);
   else setTimeout(()=>rTot(id),30);
@@ -917,7 +919,60 @@ function bNomina(dat){
     '<th style="min-width:120px">Cargo</th><th>Cantidad</th><th>Salario base</th><th>H. extras</th><th>No salarial</th><th>Rodamiento</th><th>Aux. transporte</th>'+
     '<th class="th-calc">Total devengado</th><th class="th-calc">SS - PS</th><th class="th-calc">Costo total</th><th style="width:28px"></th>'+
     '</tr></thead><tbody id="nom-body">'+fixedRows+extraRows+addRow+'</tbody></table></div>'+
-    '<div class="ftot"><span class="ftot-l">Total nómina operativa mensual</span><span class="ftot-v" id="ngrand">$0</span></div>';
+    '<div style="height:16px"></div>'+
+    '<div style="background:linear-gradient(135deg,#111,#2c2c2c);border-radius:9px 9px 0 0;padding:12px 18px;border-left:4px solid var(--rojo)">'+
+      '<span style="font-size:12px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.06em">👔 Dotación y equipos</span>'+
+    '</div>'+
+    bDotacion(dat._dot||{})+''+
+    '<div class="ftot"><span class="ftot-l">Total nómina + dotación mensual</span><span class="ftot-v" id="ngrand">$0</span></div>';
+}
+function bDotacion(d){
+  const campos=[
+    {id:'uniformes',l:'Uniformes y calzado',dv:0},
+    {id:'chalecos',l:'Chalecos antibalas / multipropósito',dv:0},
+    {id:'bodycam',l:'Cámaras bodycam',dv:0},
+    {id:'linternas',l:'Linternas tácticas',dv:0},
+    {id:'bastones',l:'Bastones / tonfas',dv:0},
+    {id:'botiquin',l:'Botiquín y EPP',dv:0},
+  ];
+  const st='width:100%;padding:6px 8px;border:1.5px solid var(--pl2);border-radius:6px;font-size:12px;text-align:right;font-variant-numeric:tabular-nums;background:#fff;color:#1a1a1a';
+  let rows=campos.map(f=>{
+    const v=d[f.id]!==undefined?d[f.id]:f.dv;
+    return '<div style="display:grid;grid-template-columns:1fr 180px;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--pl2)">'+
+      '<span style="font-size:12.5px;color:var(--g3)">'+f.l+'</span>'+
+      '<input type="number" id="dot_'+f.id+'" value="'+v+'" oninput="rDotTotal()" style="'+st+'">'+
+    '</div>';
+  }).join('');
+  return '<div style="background:#fff;border-radius:0 0 9px 9px;border:1.5px solid var(--pl2);border-top:none;padding:14px 18px;margin-bottom:4px">'+
+    rows+
+    '<div style="display:grid;grid-template-columns:1fr 180px;gap:10px;align-items:center;padding:10px 0 4px;margin-top:4px">'+
+      '<span style="font-size:11px;font-weight:700;color:var(--rojo);text-transform:uppercase;letter-spacing:.05em">Conceptos adicionales</span>'+
+    '</div>'+
+    bTblExtra([{id:"concepto",l:"Concepto",txt:true},{id:"v",l:"Valor mensual",nr:true}],d._xd||[],"_xd")+
+    '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0 0;border-top:1.5px solid var(--pl2);margin-top:8px">'+
+      '<span style="font-size:12px;font-weight:700;color:var(--g3)">Subtotal dotación</span>'+
+      '<span style="font-size:15px;font-weight:900;color:var(--g1)" id="dot-subtot">$0</span>'+
+    '</div>'+
+  '</div>';
+}
+function rDotTotal(){
+  const campos=['uniformes','chalecos','bodycam','linternas','bastones','botiquin'];
+  let t=campos.reduce((s,f)=>{const el=document.getElementById('dot_'+f);return s+(el?parseFloat(el.value)||0:0);},0);
+  t+=Array.from(document.querySelectorAll('[data-k="_xd"] .xc.nr')).reduce((s,e)=>s+(parseFloat(e.value)||0),0);
+  const el=document.getElementById('dot-subtot');
+  if(el)el.textContent=cp(t);
+  rNomGrandTotal();
+}
+function rNomGrandTotal(){
+  // Total nómina + dotación
+  let nom=0;
+  CARGOS.forEach(c=>{const el=$('ns_'+c.id);if(el){const v=parseFloat(el.textContent.replace(/[^0-9]/g,''))||0;nom+=v;}});
+  const tbody=document.getElementById('nom-body');
+  if(tbody){tbody.querySelectorAll('[data-tipo=extra]').forEach(tr=>{const uid=tr.dataset.uid;const el=$(uid+'_tot');if(el){const v=parseFloat(el.textContent.replace(/[^0-9]/g,''))||0;nom+=v;}});}
+  const campos=['uniformes','chalecos','bodycam','linternas','bastones','botiquin'];
+  let dot=campos.reduce((s,f)=>{const el=document.getElementById('dot_'+f);return s+(el?parseFloat(el.value)||0:0);},0);
+  dot+=Array.from(document.querySelectorAll('[data-k="_xd"] .xc.nr')).reduce((s,e)=>s+(parseFloat(e.value)||0),0);
+  const el=$('ngrand');if(el)el.textContent=cp(nom+dot);
 }
 function bNomRow(r,idx){
   const g=(f,dv)=>r&&r[f]!==undefined?parseFloat(r[f])||0:dv;
@@ -1044,6 +1099,13 @@ async function guardar(){
       const gf=f=>{const el=tr.querySelector('[data-f="'+f+'"]');return el?el.value:'';};
       return {cargo:gf('cargo'),cant:gf('cant'),sal:gf('sal'),ext:gf('ext'),nos:gf('nos'),rod:gf('rod'),tra:gf('tra')};
     }).filter(r=>parseFloat(r.cant)||parseFloat(r.sal)):[];
+    // Guardar dotación
+    datos._dot={};
+    ['uniformes','chalecos','bodycam','linternas','bastones','botiquin'].forEach(f=>{
+      const el=document.getElementById('dot_'+f);
+      if(el)datos._dot[f]=el.value;
+    });
+    datos._dot._xd=getXRows('_xd');
 }else if(def.esOtros){
     datos._x=getXRows('_x');
   }else{
@@ -1089,7 +1151,7 @@ function rPYG(r){
   el.innerHTML=
     row('Ingresos del contrato',r.ing,'b ca')+
     '<div style="height:4px"></div>'+
-    row('Nómina operativa',-(r.det.nomina||0),'cr')+
+    row('Nómina y Dotación',-(r.det.nomina||0),'cr')+
     row('Dotación y equipos',-(r.det.dotacion||0),'cr')+
     row('Comunicaciones',-(r.det.comunicaciones||0),'cr')+
     row('Vehículos',-(r.det.vehiculos||0),'cr')+
@@ -1154,7 +1216,7 @@ async function crearAnalisis(){
     let num=1;
     if(Array.isArray(ult)&&ult.length){const m=ult[0].consecutivo?.match(/\d+/);if(m)num=parseInt(m[0])+1;}
     const con='ANL-'+String(num).padStart(3,'0');
-    const nuevo=await sPost('analisis_v2',{consecutivo:con,cliente_nit:CS.nit,cliente_nombre:CS.nom,modulos:{},modulos_completados:0,total_modulos:11,estado:'en_curso'});
+    const nuevo=await sPost('analisis_v2',{consecutivo:con,cliente_nit:CS.nit,cliente_nombre:CS.nom,modulos:{},modulos_completados:0,total_modulos:10,estado:'en_curso'});
     const cr=Array.isArray(nuevo)?nuevo[0]:nuevo;
     AL.unshift(cr);cerrarNuevo();await cargar(cr.id);toast('Análisis '+con+' creado','ok');
   }catch(e){toast('Error: '+e.message,'err');}
